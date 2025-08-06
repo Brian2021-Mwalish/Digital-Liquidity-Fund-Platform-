@@ -3,7 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 
 // Public Pages
 import LandingPage from '../pages/LandingPage';
-import Home from '../pages/Home';
+import Home from '../pages/Home'; // This is your actual Homepage.jsx
 import About from '../pages/About';
 import Contact from '../pages/Contact';
 import NotFound from '../pages/NotFound';
@@ -39,7 +39,7 @@ import Statement from '../features/reports/Statement';
 const AppRoutes = () => {
   return (
     <Routes>
-      {/* Landing Page */}
+      {/* Landing Page ONLY at "/" */}
       <Route path="/" element={<LandingPage />} />
 
       {/* Public Pages */}
@@ -47,7 +47,7 @@ const AppRoutes = () => {
       <Route path="/about" element={<About />} />
       <Route path="/contact" element={<Contact />} />
 
-      {/* Authentication */}
+      {/* Auth */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/kyc" element={<KYCForm />} />
@@ -69,7 +69,7 @@ const AppRoutes = () => {
       {/* Admin Dashboard */}
       <Route path="/admin" element={<AdminDashboard />} />
 
-      {/* Catch-All Route */}
+      {/* Catch-All */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
