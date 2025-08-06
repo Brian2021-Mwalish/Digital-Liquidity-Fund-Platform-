@@ -1,94 +1,79 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import StepOne from "./registerSteps/StepOne";
+import StepTwo from "./registerSteps/StepTwo";
+import StepThree from "./registerSteps/StepThree";
+import { useNavigate } from "react-router-dom";
 
 const Register = () => {
-  const navigate = useNavigate();
-  const [form, setForm] = useState({
-    fullName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
+  const [step, setStep] = useState(1);
+  const [formData, setFormData] = useState({
+    fullName: "",
+    email: "",
+    password: "",
+    phone: "",
+    mpesaCode: "",
+    agreeToTerms: false,
   });
 
+  const navigate = useNavigate();
+
+  const nextStep = () => setStep(prev => prev + 1);
+  const prevStep = () => setStep(prev => prev - 1);
+
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
+    try {
+      const response = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
 
-    if (form.password !== form.confirmPassword) {
-      alert("Passwords don't match");
-      return;
+      if (response.ok) {
+        alert("Registration successful!");
+        navigate("/login");
+      } else {
+        alert("Registration failed.");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Network error.");
     }
-
-    // ✅ TODO: Call API to register user here
-    console.log('Registering:', form);
-    navigate('/login'); // Navigate to login after successful registration
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
-      <div className="w-full max-w-md p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
-        <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white mb-6">
-          Create Your Account
-        </h2>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="text"
-            name="fullName"
-            placeholder="Full Name"
-            value={form.fullName}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-indigo-900 to-blue-800 text-white">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-xl text-black p-6">
+        {step === 1 && (
+          <StepOne
+            formData={formData}
+            handleChange={handleChange}
+            nextStep={nextStep}
           />
-
-          <input
-            type="email"
-            name="email"
-            placeholder="Email Address"
-            value={form.email}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+        )}
+        {step === 2 && (
+          <StepTwo
+            formData={formData}
+            handleChange={handleChange}
+            nextStep={nextStep}
+            prevStep={prevStep}
           />
-
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+        )}
+        {step === 3 && (
+          <StepThree
+            formData={formData}
+            handleChange={handleChange}
+            prevStep={prevStep}
+            handleSubmit={handleSubmit}
           />
-
-          <input
-            type="password"
-            name="confirmPassword"
-            placeholder="Confirm Password"
-            value={form.confirmPassword}
-            onChange={handleChange}
-            required
-            className="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
-          />
-
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition"
-          >
-            Register
-          </button>
-        </form>
-
-        <p className="mt-4 text-sm text-center text-gray-600 dark:text-gray-400">
-          Already have an account?{' '}
-          <Link to="/login" className="text-blue-500 hover:underline">
-            Login
-          </Link>
-        </p>
+        )}
       </div>
     </div>
   );
