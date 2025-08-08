@@ -1,93 +1,100 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { ArrowLeft } from "lucide-react"; // Back arrow icon
 
-const StepTwo = () => {
-  const navigate = useNavigate();
+export default function StepTwo({ onNext, onBack }) {
+  const [mobileNumber, setMobileNumber] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
 
-  const [formData, setFormData] = useState({
-    phoneNumber: '',
-  });
-
-  const [savedData, setSavedData] = useState(null);
-
-  useEffect(() => {
-    const stored = localStorage.getItem('registerData');
-    if (!stored) {
-      navigate('/register/step-one'); // redirect if step 1 not complete
-    } else {
-      setSavedData(JSON.parse(stored));
-    }
-  }, [navigate]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const validatePhone = (phone) => {
-    return /^(\+254|254|0)?7\d{8}$/.test(phone);
-  };
-
-  const handleNext = (e) => {
+  const handlePayment = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
+    setSuccess(false);
 
-    if (!validatePhone(formData.phoneNumber)) {
-      alert('Please enter a valid Kenyan phone number (e.g., 0712345678)');
-      return;
+    try {
+      // Send only mobile number to backend
+      const res = await fetch("http://localhost:8000/api/payment/initiate/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mobile_number: mobileNumber }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Payment initiation failed");
+      }
+
+      const data = await res.json();
+      if (data.status === "success") {
+        setSuccess(true);
+
+        // Redirect to step 3 after short delay
+        setTimeout(() => {
+          onNext();
+        }, 1500);
+      } else {
+        throw new Error(data.message || "Payment could not be completed");
+      }
+    } catch (err) {
+      console.error("Error initiating payment:", err);
+      setError(err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
     }
-
-    const confirmPayment = window.confirm(
-      `We will initiate a payment of KES 100 to Till Number 123456 from this number:\n\n${formData.phoneNumber}\n\nDo you want to proceed?`
-    );
-
-    if (!confirmPayment) return;
-
-    const completeData = {
-      ...savedData,
-      ...formData,
-    };
-
-    localStorage.setItem('registerData', JSON.stringify(completeData));
-
-    // Simulate payment trigger here (real integration would call backend or STK push)
-
-    navigate('/register/step-three');
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      <form onSubmit={handleNext} className="bg-white shadow-md rounded-lg p-8 w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center">Step 2: Mobile Payment</h2>
+    <motion.div
+      className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-green-900 to-gray-900 p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+    >
+      <motion.div
+        className="bg-white shadow-lg rounded-xl p-8 w-full max-w-md relative"
+        initial={{ y: 30 }}
+        animate={{ y: 0 }}
+      >
+        {/* Back Arrow */}
+        <button
+          type="button"
+          onClick={onBack}
+          className="absolute -top-4 -left-4 bg-green-700 text-white p-2 rounded-full hover:bg-green-800 transition shadow-md"
+          aria-label="Go Back"
+        >
+          <ArrowLeft size={20} />
+        </button>
 
-        <p className="mb-4 text-sm text-gray-700">
-          Please enter your M-Pesa phone number. A prompt to pay <strong>KES 100</strong> to Till Number <strong>123456</strong> will appear automatically.
+        <h2 className="text-2xl font-bold text-green-800 mb-4 text-center">
+          Payment Confirmation
+        </h2>
+        <p className="text-gray-600 mb-6 text-center">
+          Enter your mobile number to receive the payment prompt.
         </p>
 
-        <div className="mb-6">
-          <label className="block text-sm font-medium mb-1">Phone Number</label>
+        <form onSubmit={handlePayment} className="space-y-4">
           <input
-            type="text"
-            name="phoneNumber"
-            value={formData.phoneNumber}
-            onChange={handleChange}
-            placeholder="e.g., 0712345678"
-            className="w-full border px-3 py-2 rounded-md focus:outline-none focus:ring focus:border-blue-500"
+            type="tel"
+            placeholder="e.g. 0712345678"
+            value={mobileNumber}
+            onChange={(e) => setMobileNumber(e.target.value)}
             required
+            className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-green-600"
           />
-        </div>
 
-        <button
-          type="submit"
-          className="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition"
-        >
-          Pay & Continue
-        </button>
-      </form>
-    </div>
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {success && <p className="text-green-600 text-sm">Payment successful! Redirecting...</p>}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-green-700 text-white font-semibold p-3 rounded-lg hover:bg-green-800 transition"
+          >
+            {loading ? "Processing..." : "Pay Now"}
+          </button>
+        </form>
+      </motion.div>
+    </motion.div>
   );
-};
-
-export default StepTwo;
+}
