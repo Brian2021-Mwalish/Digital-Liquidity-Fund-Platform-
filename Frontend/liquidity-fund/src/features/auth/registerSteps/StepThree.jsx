@@ -11,6 +11,7 @@ const StepThree = () => {
   });
 
   const [showWelcome, setShowWelcome] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const stored = localStorage.getItem('registerData');
@@ -24,7 +25,7 @@ const StepThree = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!formData.fullName || !formData.idNumber || !formData.dateOfBirth || !formData.address) {
@@ -38,15 +39,31 @@ const StepThree = () => {
       ...formData,
     };
 
-    localStorage.setItem('registerData', JSON.stringify(finalData));
+    try {
+      const response = await fetch('http://localhost:8000/api/kyc/complete/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(finalData),
+      });
 
-    // Show welcome message
-    setShowWelcome(true);
+      if (!response.ok) {
+        throw new Error('KYC submission failed. Please try again.');
+      }
 
-    // Redirect to login after 4 seconds
-    setTimeout(() => {
-      navigate('/login');
-    }, 4000);
+      // Optionally clear localStorage
+      localStorage.removeItem('registerData');
+
+      // Show welcome message
+      setShowWelcome(true);
+
+      setTimeout(() => {
+        navigate('/login');
+      }, 4000);
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   if (showWelcome) {
@@ -64,6 +81,10 @@ const StepThree = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
       <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-lg p-8 w-full max-w-lg">
         <h2 className="text-2xl font-bold mb-6 text-center">Step 3: KYC Form</h2>
+
+        {error && (
+          <div className="mb-4 text-red-600 bg-red-100 p-3 rounded">{error}</div>
+        )}
 
         <div className="mb-4">
           <label className="block text-sm font-medium mb-1">Full Name</label>
