@@ -12,6 +12,7 @@ const StepThree = () => {
 
   const [showWelcome, setShowWelcome] = useState(false);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('registerData');
@@ -33,15 +34,26 @@ const StepThree = () => {
       return;
     }
 
+    const userId = localStorage.getItem('userId');
+    if (!userId) {
+      setError('User ID missing. Please restart registration.');
+      return;
+    }
+
+    // Combine data from Step 1 (stored) + Step 3 inputs
     const existingData = JSON.parse(localStorage.getItem('registerData'));
     const finalData = {
       ...existingData,
       ...formData,
+      user_id: userId,
     };
 
+    setLoading(true);
+    setError(null);
+
     try {
-      const response = await fetch('http://localhost:8000/api/kyc/complete/', {
-        method: 'POST',
+      const response = await fetch(`/api/user/register/step-three/${userId}/`, {
+        method: 'PUT', // or PATCH, depending on your backend
         headers: {
           'Content-Type': 'application/json',
         },
@@ -49,20 +61,24 @@ const StepThree = () => {
       });
 
       if (!response.ok) {
-        throw new Error('KYC submission failed. Please try again.');
+        const errData = await response.json();
+        setError(errData.detail || 'KYC submission failed. Please try again.');
+        setLoading(false);
+        return;
       }
 
-      // Optionally clear localStorage
       localStorage.removeItem('registerData');
+      localStorage.removeItem('userId');
 
-      // Show welcome message
       setShowWelcome(true);
 
       setTimeout(() => {
         navigate('/login');
       }, 4000);
     } catch (err) {
-      setError(err.message);
+      setError('Network error. Please try again.');
+      console.error(err);
+      setLoading(false);
     }
   };
 
@@ -79,7 +95,10 @@ const StepThree = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-lg p-8 w-full max-w-lg">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white shadow-md rounded-lg p-8 w-full max-w-lg"
+      >
         <h2 className="text-2xl font-bold mb-6 text-center">Step 3: KYC Form</h2>
 
         {error && (
@@ -136,9 +155,10 @@ const StepThree = () => {
 
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition"
+          disabled={loading}
+          className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition disabled:opacity-60"
         >
-          Submit KYC
+          {loading ? 'Submitting...' : 'Submit KYC'}
         </button>
       </form>
     </div>
