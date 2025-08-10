@@ -9,8 +9,7 @@ class RegistrationStepOneSerializer(serializers.ModelSerializer):
         fields = ['id', 'full_name', 'email', 'password']
 
     def create(self, validated_data):
-        # TODO: Hash the password here before saving for security
-        # e.g., validated_data['password'] = hash_function(validated_data['password'])
+        # Normally, hash password here
         return RegistrationStepOne.objects.create(**validated_data)
 
 
