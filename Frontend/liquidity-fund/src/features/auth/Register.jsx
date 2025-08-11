@@ -3,11 +3,12 @@ import { useForm } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import toast from "react-hot-toast";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 
-// ✅ Validation Schema
+// Validation Schema
 const schema = yup.object().shape({
+  full_name: yup.string().required("Full name is required"),
   email: yup.string().email("Invalid email").required("Email is required"),
   password: yup
     .string()
@@ -23,47 +24,79 @@ const Register = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    watch,
+    formState: { errors, isSubmitting },
   } = useForm({
     resolver: yupResolver(schema),
+    mode: "onChange", // ✅ Live validation feedback
   });
 
-  const onSubmit = async (data) => {
+  const onSubmit = async (formData) => {
+    setLoading(true);
+    toast.loading("Creating your account...", { id: "register" });
+
     try {
-      // Mock API call - replace with your backend endpoint
-      const res = await fetch("/api/auth/register", {
+      const res = await fetch("http://localhost:8000/api/auth/register/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(formData),
       });
 
-      if (!res.ok) throw new Error("Registration failed");
+      const data = await res.json();
 
-      toast.success("Account created successfully!");
-      navigate("/login");
+      if (!res.ok) {
+        const errorMsg =
+          typeof data === "object"
+            ? Object.values(data).flat().join(" ")
+            : "Registration failed";
+        throw new Error(errorMsg);
+      }
+
+      toast.success("🎉 Account created successfully! Redirecting to login...", {
+        id: "register",
+      });
+      setTimeout(() => navigate("/login"), 1500);
     } catch (error) {
-      toast.error(error.message || "Something went wrong");
+      toast.error(error.message || "Something went wrong", { id: "register" });
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleGoogleSignUp = () => {
-    // Google Auth API integration
-    toast("Redirecting to Google Sign Up...");
+    toast("🌐 Redirecting to Google Sign Up...", { icon: "🔗" });
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 p-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8 border border-blue-100">
         <h2 className="text-2xl font-bold text-center text-blue-700">Create an Account</h2>
-        <p className="text-center text-gray-500 mb-6">
-          Join Liquidity Investments today
-        </p>
+        <p className="text-center text-gray-500 mb-6">Join Liquidity Investments today</p>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Full Name */}
+          <div>
+            <label className="block mb-1 font-medium text-gray-700">Full Name</label>
+            <input
+              type="text"
+              {...register("full_name")}
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                errors.full_name
+                  ? "border-red-500 focus:ring-red-300"
+                  : "border-gray-300 focus:ring-blue-300"
+              }`}
+              placeholder="Enter your full name"
+            />
+            {errors.full_name && (
+              <p className="text-sm text-red-500 mt-1">{errors.full_name.message}</p>
+            )}
+          </div>
+
           {/* Email */}
           <div>
             <label className="block mb-1 font-medium text-gray-700">Email</label>
@@ -141,9 +174,10 @@ const Register = () => {
           {/* Submit */}
           <button
             type="submit"
-            className="w-full bg-blue-700 text-white py-2 rounded-lg hover:bg-blue-800 transition"
+            disabled={loading || isSubmitting}
+            className="w-full flex justify-center items-center gap-2 bg-blue-700 text-white py-2 rounded-lg hover:bg-blue-800 transition disabled:opacity-50"
           >
-            Sign Up
+            {loading ? <Loader2 className="animate-spin" size={20} /> : "Sign Up"}
           </button>
         </form>
 

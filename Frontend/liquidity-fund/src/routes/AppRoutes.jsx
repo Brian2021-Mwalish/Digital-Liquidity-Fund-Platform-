@@ -12,6 +12,10 @@ import Login from "../features/auth/Login";
 import Register from "../features/auth/Register";
 import KYCForm from "../features/auth/KYCForm";
 
+// Dashboards
+import ClientDashboard from "../features/dashboard/ClientDashboard";
+import AdminDashboard from "../features/dashboard/AdminDashboard";
+
 const AppRoutes = () => {
   return (
     <Routes>
@@ -21,6 +25,11 @@ const AppRoutes = () => {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/kyc" element={<KYCForm />} />
+
+      {/* Dashboard Routes */}
+      <Route path="/client-dashboard" element={<ClientDashboard />} />
+      <Route path="/admin-dashboard" element={<AdminDashboard />} />
+
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

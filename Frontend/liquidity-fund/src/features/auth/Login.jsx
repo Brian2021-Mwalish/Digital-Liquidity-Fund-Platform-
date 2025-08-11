@@ -26,8 +26,7 @@ const Login = () => {
 
   const onSubmit = async (data) => {
     try {
-      // Example API call
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch("http://localhost:8000/api/auth/login/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -41,15 +40,15 @@ const Login = () => {
 
       toast.success("Login successful!");
 
-      // Store token in localStorage
+      // Save token + role in localStorage
       localStorage.setItem("token", result.token);
       localStorage.setItem("role", result.role);
 
-      // Role-based redirect
+      // Redirect based on role
       if (result.role === "admin") {
-        navigate("/admin/dashboard");
+        navigate("/admin-dashboard");
       } else {
-        navigate("/client/dashboard");
+        navigate("/client-dashboard");
       }
     } catch (error) {
       toast.error(error.message);
@@ -58,8 +57,7 @@ const Login = () => {
 
   const handleGoogleLogin = () => {
     toast.loading("Redirecting to Google...");
-    // Example redirect to backend OAuth
-    window.location.href = "/api/auth/google";
+    window.location.href = "http://localhost:8000/api/auth/google/";
   };
 
   return (
