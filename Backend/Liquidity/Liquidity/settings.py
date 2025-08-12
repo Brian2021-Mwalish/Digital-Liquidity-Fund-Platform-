@@ -66,6 +66,10 @@ TEMPLATES = [
 WSGI_APPLICATION = 'Liquidity.wsgi.application'
 
 # -------------------
+
+# URL of your frontend app
+FRONTEND_URL = "http://localhost:5173"  # or your actual frontend domain
+
 # 💾 PostgreSQL Database
 DATABASES = {
     'default': {

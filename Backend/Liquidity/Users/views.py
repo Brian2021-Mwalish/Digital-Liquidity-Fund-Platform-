@@ -1,3 +1,4 @@
+# users/views.py
 from django.core.mail import send_mail
 from django.conf import settings
 from rest_framework import status
@@ -8,25 +9,33 @@ from .serializers import RegisterSerializer, LoginSerializer
 
 class RegisterView(APIView):
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
+        # Remove confirmPassword from request if present
+        data = request.data.copy()
+        data.pop("confirmPassword", None)
+
+        serializer = RegisterSerializer(data=data)
         if serializer.is_valid():
             user = serializer.save()
 
-            login_link = f"{settings.FRONTEND_URL}/login"
+            login_link = f"{getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')}/login"
 
-            send_mail(
-                subject="🎉 Welcome to Liquidity — Your Account is Ready",
-                message=(
-                    f"Hi {user.full_name},\n\n"
-                    f"Your Liquidity account has been created successfully!\n\n"
-                    f"Log in here: {login_link}\n\n"
-                    f"Thanks for joining us!\n"
-                    f"- The Liquidity Team"
-                ),
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-                fail_silently=False,
-            )
+            try:
+                send_mail(
+                    subject="🎉 Welcome to Liquidity — Your Account is Ready",
+                    message=(
+                        f"Hi {user.full_name},\n\n"
+                        f"Your Liquidity account has been created successfully!\n\n"
+                        f"Log in here: {login_link}\n\n"
+                        f"Thanks for joining us!\n"
+                        f"- The Liquidity Team"
+                    ),
+                    from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@liquidity.com"),
+                    recipient_list=[user.email],
+                    fail_silently=False,
+                )
+            except Exception as e:
+                # Log email errors but don't block registration
+                print(f"Email send failed: {e}")
 
             return Response(
                 {"message": "✅ Registration successful! Please check your email for login instructions."},
@@ -41,7 +50,12 @@ class LoginView(APIView):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data["user"]
-            return Response({"message": f"✅ Login successful. Welcome back, {user.full_name}!"})
+            is_superuser = serializer.validated_data.get("is_superuser", 0)
+            # You may also want to return a token if using JWT or session auth
+            return Response({
+                "message": f"✅ Login successful. Welcome back, {user.full_name}!",
+                "is_superuser": is_superuser
+            })
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

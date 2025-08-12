@@ -40,12 +40,16 @@ const Login = () => {
 
       toast.success("Login successful!");
 
-      // Save token + role in localStorage
-      localStorage.setItem("token", result.token);
-      localStorage.setItem("role", result.role);
+      // Save token in localStorage if present
+      if (result.token) {
+        localStorage.setItem("token", result.token);
+      }
 
-      // Redirect based on role
-      if (result.role === "admin") {
+      // Debug: log the response to check is_superuser value
+      console.log("Login response:", result);
+
+      // Admin redirect: backend returns is_superuser as integer (1 for admin, 0 for others)
+      if (result.is_superuser === 1) {
         navigate("/admin-dashboard");
       } else {
         navigate("/client-dashboard");
@@ -61,43 +65,43 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600 px-4">
-      <div className="bg-white/10 backdrop-blur-lg shadow-lg rounded-xl p-8 w-full max-w-md border border-white/20">
+    <div className="fixed inset-0 w-screen h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-blue-600 px-4">
+      <div className="bg-white/10 backdrop-blur-lg shadow-lg rounded-xl p-8 w-full max-w-xl border border-white/20">
         <h2 className="text-2xl font-bold text-white mb-6 text-center">
           Liquidity Investments Login
         </h2>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          {/* Email */}
-          <div>
-            <label className="block text-white mb-1">Email</label>
-            <input
-              type="email"
-              {...register("email")}
-              className="w-full px-4 py-2 rounded-lg border border-white/20 bg-white/5 text-white focus:ring-2 focus:ring-blue-400 outline-none"
-              placeholder="you@example.com"
-            />
-            {errors.email && <p className="text-red-400 text-sm mt-1">{errors.email.message}</p>}
-          </div>
-
-          {/* Password */}
-          <div>
-            <label className="block text-white mb-1">Password</label>
-            <div className="relative">
+          {/* Email & Password - Horizontal Alignment */}
+          <div className="flex gap-4">
+            <div className="w-1/2">
+              <label className="block text-white mb-1 text-sm">Email</label>
               <input
-                type={showPassword ? "text" : "password"}
-                {...register("password")}
-                className="w-full px-4 py-2 rounded-lg border border-white/20 bg-white/5 text-white focus:ring-2 focus:ring-blue-400 outline-none"
-                placeholder="••••••••"
+                type="email"
+                {...register("email")}
+                className="w-full px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm bg-white/10 text-white"
+                placeholder="Email"
               />
-              <span
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-2.5 text-white cursor-pointer"
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </span>
+              {errors.email && <p className="text-xs text-red-400 mt-1">{errors.email.message}</p>}
             </div>
-            {errors.password && <p className="text-red-400 text-sm mt-1">{errors.password.message}</p>}
+            <div className="w-1/2">
+              <label className="block text-white mb-1 text-sm">Password</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  {...register("password")}
+                  className="w-full px-2 py-1 pr-8 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm bg-white/10 text-white"
+                  placeholder="Password"
+                />
+                <span
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2 top-1.5 text-white cursor-pointer"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </span>
+              </div>
+              {errors.password && <p className="text-xs text-red-400 mt-1">{errors.password.message}</p>}
+            </div>
           </div>
 
           {/* Submit Button */}

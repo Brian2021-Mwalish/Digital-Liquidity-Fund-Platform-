@@ -1,45 +1,36 @@
 # users/serializers.py
 from rest_framework import serializers
-from django.contrib.auth import get_user_model, authenticate
-from django.core.mail import send_mail
-from django.conf import settings
-
-User = get_user_model()
+from .models import CustomUser
 
 
 class RegisterSerializer(serializers.ModelSerializer):
-    confirm_password = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True)
 
     class Meta:
-        model = User
-        fields = ["full_name", "email", "password", "confirm_password"]
-        extra_kwargs = {
-            "password": {"write_only": True},
-            "email": {"required": True},
-            "full_name": {"required": True},
-        }
+        model = CustomUser
+        fields = ["email", "full_name", "password"]
 
-    def validate(self, attrs):
-        if attrs.get("password") != attrs.get("confirm_password"):
-            raise serializers.ValidationError({"password": "Passwords do not match"})
-        return attrs
+
+    def validate_full_name(self, value):
+        if not value or not value.strip():
+            raise serializers.ValidationError("Full name is required.")
+        if len(value.strip()) < 3:
+            raise serializers.ValidationError("Full name must be at least 3 characters.")
+        return value
+
+    def validate_email(self, value):
+        if not value:
+            raise serializers.ValidationError("Email is required.")
+        if CustomUser.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Email already exists.")
+        return value
+
+
+    
 
     def create(self, validated_data):
-        validated_data.pop("confirm_password")
-        password = validated_data.pop("password")
-
-        user = User.objects.create_user(password=password, **validated_data)
-
-        # Send login link via email
-        login_link = f"{settings.FRONTEND_URL}/login"
-        send_mail(
-            subject="Your Login Link - Liquidity Investments",
-            message=f"Hello {user.full_name},\n\nThank you for registering! You can log in using this link: {login_link}\n\nBest regards,\nLiquidity Investments Team",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            fail_silently=False,
-        )
-
+        user = CustomUser.objects.create_user(**validated_data)
+        # You can add extra logic here if needed
         return user
 
 
@@ -47,15 +38,14 @@ class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
 
-    def validate(self, attrs):
-        email = attrs.get("email")
-        password = attrs.get("password")
-        user = authenticate(username=email, password=password)
-
+    def validate(self, data):
+        from django.contrib.auth import authenticate
+        user = authenticate(email=data["email"], password=data["password"])
         if not user:
-            raise serializers.ValidationError("Invalid credentials")
+            raise serializers.ValidationError("Invalid credentials.")
         if not user.is_active:
-            raise serializers.ValidationError("Account is inactive")
-
-        attrs["user"] = user
-        return attrs
+            raise serializers.ValidationError("This account is inactive.")
+        data["user"] = user
+        # Return is_superuser as integer for reliable frontend detection
+        data["is_superuser"] = 1 if getattr(user, "is_superuser", False) else 0
+        return data
