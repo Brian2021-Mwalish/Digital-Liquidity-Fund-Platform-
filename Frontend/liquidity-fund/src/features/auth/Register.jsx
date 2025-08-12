@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import NavigationArrow from "../../components/NavigationArrow";
 import { useForm } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -89,6 +90,10 @@ const Register = () => {
   return (
     <div className="fixed inset-0 w-screen h-screen bg-gradient-to-br from-indigo-100 via-white to-blue-100 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl space-y-8 animate-fade-in">
+        {/* Navigation Arrow */}
+        <div className="mb-2">
+          <NavigationArrow label="Back to Home" to="/" />
+        </div>
         {/* Header */}
         <div className="text-center transform transition-all duration-300 hover:scale-105">
           <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent animate-pulse">

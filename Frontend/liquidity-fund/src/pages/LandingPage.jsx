@@ -18,10 +18,10 @@ const LandingPage = () => {
   };
 
   return (
-    <div className="fixed inset-0 w-screen h-screen bg-white text-gray-800 font-sans overflow-x-hidden text-sm">
+    <div className="fixed inset-0 w-screen min-h-screen bg-white text-gray-800 font-sans overflow-x-auto overflow-y-auto text-sm">
       {/* NAVIGATION */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white bg-opacity-90 backdrop-blur-md border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav className="fixed top-0 left-0 right-0 z-[100] bg-white bg-opacity-95 backdrop-blur-md border-b border-gray-200 shadow-lg">
+        <div className="max-w-full sm:max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex-shrink-0">
               <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-green-500 bg-clip-text text-transparent">
@@ -55,7 +55,7 @@ const LandingPage = () => {
       </nav>
 
       {/* HERO SECTION */}
-      <section className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-16 bg-gradient-to-br from-emerald-600 via-green-500 to-emerald-600">
+      <section className="relative min-h-screen flex items-center justify-center px-2 sm:px-4 lg:px-8 pt-20 bg-gradient-to-br from-emerald-600 via-green-500 to-emerald-600">
         {/* Floating geometric shapes */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div 
@@ -72,7 +72,7 @@ const LandingPage = () => {
           ></div>
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto text-center">
+        <div className="relative z-10 w-full max-w-7xl mx-auto text-center">
           <div>
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black mb-4 leading-tight text-white drop-shadow-lg">
               Kenya's <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500">Smartest</span>
@@ -104,18 +104,18 @@ const LandingPage = () => {
       </section>
 
       {/* HOW IT WORKS */}
-      <section id="how-it-works" className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-gray-50 to-gray-100">
+      <section id="how-it-works" className="py-10 sm:py-16 px-2 sm:px-4 lg:px-8 bg-gradient-to-br from-gray-50 to-gray-100 mt-4">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 bg-gradient-to-r from-emerald-600 to-green-500 bg-clip-text text-transparent">
             How It Works
           </h2>
-          <p className="text-base text-gray-600 max-w-2xl mx-auto">
+          <p className="text-xs sm:text-sm lg:text-base text-gray-600 max-w-2xl mx-auto mb-2">
               Get started in minutes with our streamlined investment process
-            </p>
+          </p>
           </div>
           
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8">
             {[ 
               {
                 title: "1. Register & Verify",
@@ -149,29 +149,29 @@ const LandingPage = () => {
       </section>
 
       {/* CLIENT & ADMIN BENEFITS */}
-      <section id="benefits" className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 bg-white">
+      <section id="benefits" className="py-10 sm:py-16 px-2 sm:px-4 lg:px-8 bg-white mt-4">
         <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16">
             <div className="space-y-8">
               <div>
                 <h2 className="text-3xl sm:text-4xl font-bold mb-8 text-gray-800">
                   <span className="bg-gradient-to-r from-emerald-600 to-green-500 bg-clip-text text-transparent">Investor</span> Benefits
                 </h2>
                 <div className="space-y-6">
-                  {[
+                  {[ 
                     { title: "High liquidity", desc: "Withdraw in 24 hours" },
                     { title: "Capital safety", desc: "Secure instruments only" },
                     { title: "50% referral rewards", desc: "Earn when friends invest" },
                     { title: "Portfolio visibility", desc: "Real-time tracking" },
                     { title: "M-Pesa integration", desc: "Seamless transactions" },
                   ].map((benefit, index) => (
-                    <div key={index} className="flex items-start space-x-4 p-4 rounded-xl hover:bg-emerald-50 transition-colors duration-300">
-                      <div className="w-6 h-6 bg-emerald-600 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 mt-1">
+                    <div key={index} className="flex items-start space-x-2 p-2 rounded-lg hover:bg-emerald-50 transition-colors duration-300">
+                      <div className="w-4 h-4 bg-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-1">
                         ✓
                       </div>
                       <div>
-                        <h4 className="font-semibold text-gray-800">{benefit.title}</h4>
-                        <p className="text-gray-600">{benefit.desc}</p>
+                        <h4 className="font-semibold text-gray-800 text-xs">{benefit.title}</h4>
+                        <p className="text-gray-600 text-xs">{benefit.desc}</p>
                       </div>
                     </div>
                   ))}
@@ -185,19 +185,19 @@ const LandingPage = () => {
                   <span className="bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">Admin</span> Benefits
                 </h2>
                 <div className="space-y-6">
-                  {[
+                  {[ 
                     { title: "Management fees", desc: "Earn performance-based income" },
                     { title: "Automated compliance", desc: "CBK & CMA reporting" },
                     { title: "Scalable onboarding", desc: "Streamlined investor management" },
                     { title: "Real-time analytics", desc: "Investment & behavior insights" },
                   ].map((benefit, index) => (
-                    <div key={index} className="flex items-start space-x-4 p-4 rounded-xl hover:bg-purple-50 transition-colors duration-300">
-                      <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 mt-1">
+                    <div key={index} className="flex items-start space-x-2 p-2 rounded-lg hover:bg-purple-50 transition-colors duration-300">
+                      <div className="w-4 h-4 bg-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-1">
                         ✓
                       </div>
                       <div>
-                        <h4 className="font-semibold text-gray-800">{benefit.title}</h4>
-                        <p className="text-gray-600">{benefit.desc}</p>
+                        <h4 className="font-semibold text-gray-800 text-xs">{benefit.title}</h4>
+                        <p className="text-gray-600 text-xs">{benefit.desc}</p>
                       </div>
                     </div>
                   ))}
@@ -209,7 +209,7 @@ const LandingPage = () => {
       </section>
 
       {/* REFERRAL PROMO */}
-      <section id="referrals" className="relative py-16 sm:py-24 px-4 sm:px-6 lg:px-8 overflow-hidden bg-gradient-to-br from-yellow-400 via-yellow-500 to-orange-500">
+      <section id="referrals" className="relative py-10 sm:py-16 px-2 sm:px-4 lg:px-8 overflow-hidden bg-gradient-to-br from-yellow-400 via-yellow-500 to-orange-500 mt-4">
         {/* Animated Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-24 -right-24 w-48 h-48 bg-white bg-opacity-10 rounded-full animate-pulse"></div>
@@ -219,24 +219,24 @@ const LandingPage = () => {
         <div className="relative z-10 max-w-5xl mx-auto text-center">
           <div className="mb-8">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black mb-6 text-white drop-shadow-lg">
-              Earn While You <span className="text-orange-200">Share</span>
-            </h2>
-            <p className="text-base sm:text-lg text-white text-opacity-90 mb-8 max-w-3xl mx-auto leading-relaxed">
+            Earn While You <span className="text-orange-200">Share</span>
+          </h2>
+          <p className="text-xs sm:text-sm lg:text-base text-white text-opacity-90 mb-4 max-w-2xl mx-auto leading-relaxed">
               Invite friends, family or followers and get a <strong className="text-orange-200">50% bonus</strong> when they invest. 
               Passive income just got easier with our industry-leading referral program.
-            </p>
+          </p>
           </div>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center items-center mb-6">
             <button className="bg-white text-yellow-600 px-8 py-4 rounded-2xl font-bold hover:bg-orange-100 transition-all duration-500 transform hover:scale-110 hover:shadow-2xl">
-              Share My Referral Code
-            </button>
-            <button className="border-2 border-white text-white font-semibold px-8 py-4 rounded-2xl hover:bg-white hover:text-yellow-600 transition-all duration-300">
-              Learn More
-            </button>
+            Share My Referral Code
+          </button>
+          <button className="border border-white text-white font-semibold px-4 py-2 rounded-xl hover:bg-white hover:text-yellow-600 transition-all duration-300 text-xs sm:text-sm">
+            Learn More
+          </button>
           </div>
 
-          <div className="grid sm:grid-cols-3 gap-6 text-white">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 text-white">
             <div className="bg-white bg-opacity-10 p-4 rounded-xl backdrop-blur-sm">
               <div className="text-xl font-bold">50%</div>
               <div className="text-xs opacity-90">Commission Rate</div>
@@ -254,18 +254,18 @@ const LandingPage = () => {
       </section>
 
       {/* MODULES OVERVIEW */}
-      <section id="platform" className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+      <section id="platform" className="py-10 sm:py-16 px-2 sm:px-4 lg:px-8 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white mt-4">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">
-              What <span className="bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">Powers</span> the Platform
-            </h2>
-            <p className="text-base text-gray-300 max-w-2xl mx-auto">
+            What <span className="bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">Powers</span> the Platform
+          </h2>
+          <p className="text-xs sm:text-sm lg:text-base text-gray-300 max-w-2xl mx-auto mb-2">
               Built with cutting-edge technology for maximum security and performance
-            </p>
+          </p>
           </div>
           
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {[ 
               { title: "User Account + KYC Module", color: "from-blue-500 to-blue-600" },
               { title: "M-Pesa / Wallet Transactions", color: "from-green-500 to-green-600" },
@@ -291,15 +291,15 @@ const LandingPage = () => {
       </section>
 
       {/* CALL TO ACTION */}
-      <section className="bg-gradient-to-r from-emerald-600 via-green-500 to-emerald-600 text-white py-20 text-center px-4 sm:px-6 lg:px-8">
-        <div className="max-w-5xl mx-auto">
+      <section className="bg-gradient-to-r from-emerald-600 via-green-500 to-emerald-600 text-white py-10 sm:py-16 text-center px-2 sm:px-4 lg:px-8 mt-4">
+        <div className="max-w-full sm:max-w-2xl md:max-w-3xl lg:max-w-5xl mx-auto">
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black mb-6">
             Let's Grow Your <span className="text-yellow-300">Money</span>
           </h2>
-          <p className="text-base sm:text-lg mb-8 text-green-100 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xs sm:text-sm lg:text-base mb-4 text-green-100 max-w-2xl mx-auto leading-relaxed">
             Low-risk. Fully managed. 100% digital. Join thousands of Kenyans investing smarter today.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center items-center">
             <button 
               onClick={handleGetStarted}
               className="bg-white text-emerald-600 px-6 py-3 rounded-xl font-bold hover:bg-yellow-400 hover:text-white transition-all duration-500 transform hover:scale-105 hover:shadow-xl text-xs sm:text-sm"
@@ -317,9 +317,9 @@ const LandingPage = () => {
       </section>
 
       {/* FOOTER */}
-      <footer className="bg-gray-900 text-gray-300 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+      <footer className="bg-gray-900 text-gray-300 py-8 sm:py-12 px-2 sm:px-4 lg:px-8">
+        <div className="max-w-full sm:max-w-2xl md:max-w-4xl lg:max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-8 mb-6">
             <div>
               <h3 className="text-white font-bold text-xl mb-4">LiquiInvest KE</h3>
               <p className="text-sm text-gray-400 leading-relaxed">
