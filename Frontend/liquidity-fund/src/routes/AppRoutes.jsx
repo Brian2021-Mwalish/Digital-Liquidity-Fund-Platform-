@@ -1,5 +1,6 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 
 // Pages
 import LandingPage from "../pages/LandingPage";
@@ -16,22 +17,62 @@ import KYCForm from "../features/auth/KYCForm";
 import ClientDashboard from "../features/dashboard/ClientDashboard";
 import AdminDashboard from "../features/dashboard/AdminDashboard";
 
-const AppRoutes = () => {
+// Slide animation variants
+const slideVariants = {
+  initial: { opacity: 0, x: 80 },
+  animate: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: -80 },
+};
+
+const PageWrapper = ({ children }) => {
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/about" element={<About />} />
-      <Route path="/contact" element={<Contact />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/kyc" element={<KYCForm />} />
+    <motion.div
+      variants={slideVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={{
+        duration: 0.5,
+        ease: [0.4, 0, 0.2, 1], // smooth ease
+      }}
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+};
 
-      {/* Dashboard Routes */}
-      <Route path="/client-dashboard" element={<ClientDashboard />} />
-      <Route path="/admin-dashboard" element={<AdminDashboard />} />
+const AppRoutes = () => {
+  const location = useLocation();
 
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<PageWrapper><LandingPage /></PageWrapper>} />
+        <Route path="/about" element={<PageWrapper><About /></PageWrapper>} />
+        <Route path="/contact" element={<PageWrapper><Contact /></PageWrapper>} />
+        <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
+        <Route path="/register" element={<PageWrapper><Register /></PageWrapper>} />
+        <Route path="/kyc" element={<PageWrapper><KYCForm /></PageWrapper>} />
+
+        {/* Dashboard Routes */}
+        <Route
+          path="/client-dashboard"
+          element={<PageWrapper><ClientDashboard /></PageWrapper>}
+        />
+        <Route
+          path="/admin-dashboard"
+          element={<PageWrapper><AdminDashboard /></PageWrapper>}
+        />
+
+        {/* 404 */}
+        <Route path="*" element={<PageWrapper><NotFound /></PageWrapper>} />
+      </Routes>
+    </AnimatePresence>
   );
 };
 
