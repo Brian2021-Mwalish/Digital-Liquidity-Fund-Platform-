@@ -80,7 +80,7 @@ const ClientDashboard = () => {
   const PaymentModal = () => (
     <div className={`fixed inset-0 z-50 ${showPaymentModal ? 'flex' : 'hidden'} items-center justify-center`}>
       <div className="fixed inset-0 bg-black/80" onClick={() => setShowPaymentModal(false)}></div>
-      <div className="relative bg-background border rounded-lg p-6 max-w-md w-full mx-4 shadow-lg">
+      <div className="relative bg-gradient-to-br from-green-50 via-white to-green-200 border-2 border-green-500 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
         <div className="mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <span className="text-2xl font-bold">{selectedCurrency?.code}</span>
@@ -248,8 +248,9 @@ const ClientDashboard = () => {
                     <div className="text-sm text-muted-foreground mb-4">
                       Return: <span className="text-success font-medium">KES {currency.price * 2}</span>
                     </div>
-                    <button className="btn-currency w-full inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
-                      Rent Now
+                    <button className="w-full inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-gradient-to-r from-green-500 via-green-600 to-green-400 text-white shadow-lg hover:scale-105 h-12 px-4 py-2 border-2 border-green-600">
+                      <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12h16M12 4v16" /></svg>
+                      Pay with M-Pesa
                     </button>
                   </div>
                 </div>
@@ -531,62 +532,57 @@ const ClientDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-white to-blue-100">
+    <div className="fixed inset-0 w-full h-full min-h-screen min-w-screen bg-gradient-to-br from-blue-200 via-indigo-100 to-blue-400 flex flex-col">
       {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-md supports-[backdrop-filter]:bg-white/60 sticky top-0 z-40 shadow-md">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/70 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">RC</span>
-            </div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              RentFlowCoin
-            </h1>
-          </div>
-          
+      <header className="border-b bg-blue-900 sticky top-0 z-40 shadow-lg w-full">
+        <div className="w-full px-6 py-4 flex flex-row items-center justify-between">
           <div className="flex items-center gap-4">
-            <button className="relative p-2 hover:bg-muted rounded-full transition-colors">
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div className="w-12 h-12 bg-blue-800 rounded-lg flex items-center justify-center shadow-md">
+              <span className="text-white font-bold text-xl">RC</span>
+            </div>
+            <h1 className="text-2xl font-extrabold text-white tracking-wide">RentFlowCoin</h1>
+          </div>
+          <div className="flex items-center gap-6">
+            <button className="relative p-2 hover:bg-blue-800 rounded-full transition-colors">
+              <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
               </svg>
               {notifications > 0 && (
-                <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                   {notifications}
                 </span>
               )}
             </button>
-            
             <div className="relative">
               <button 
                 onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                className="flex items-center gap-2 p-2 hover:bg-muted rounded-lg transition-colors"
+                className="flex items-center gap-2 p-2 hover:bg-blue-800 rounded-lg transition-colors"
               >
-                <div className="w-8 h-8 bg-gradient-to-br from-secondary to-accent rounded-full flex items-center justify-center">
-                  <span className="text-secondary-foreground font-medium text-sm">J</span>
+                <div className="w-8 h-8 bg-blue-700 rounded-full flex items-center justify-center">
+                  <span className="text-white font-medium text-sm">J</span>
                 </div>
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="m6 9 6 6 6-6"/>
                 </svg>
               </button>
-              
               {showProfileDropdown && (
-                <div className="absolute right-0 mt-2 w-48 bg-background border rounded-lg shadow-lg z-50">
+                <div className="absolute right-0 mt-2 w-48 bg-blue-900 border border-blue-700 rounded-lg shadow-lg z-50">
                   <div className="p-2">
-                    <button className="w-full text-left px-3 py-2 hover:bg-muted rounded-md flex items-center gap-2">
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <button className="w-full text-left px-3 py-2 hover:bg-blue-800 rounded-md flex items-center gap-2 text-white">
+                      <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
                       </svg>
                       Account
                     </button>
-                    <button className="w-full text-left px-3 py-2 hover:bg-muted rounded-md flex items-center gap-2">
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <button className="w-full text-left px-3 py-2 hover:bg-blue-800 rounded-md flex items-center gap-2 text-white">
+                      <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>
                       </svg>
                       Settings
                     </button>
-                    <div className="border-t my-1"></div>
-                    <button className="w-full text-left px-3 py-2 hover:bg-muted rounded-md flex items-center gap-2 text-destructive">
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <div className="border-t my-1 border-blue-700"></div>
+                    <button className="w-full text-left px-3 py-2 hover:bg-blue-800 rounded-md flex items-center gap-2 text-red-400">
+                      <svg className="w-4 h-4 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" x2="9" y1="12" y2="12"/>
                       </svg>
                       Logout
@@ -599,9 +595,9 @@ const ClientDashboard = () => {
         </div>
       </header>
 
-      <div className="flex">
+      <div className="flex flex-1 min-h-0">
         {/* Sidebar */}
-        <aside className="w-64 min-h-screen bg-white/80 border-r sticky top-[73px] shadow-lg backdrop-blur-md">
+        <aside className="w-64 min-h-screen h-full bg-gradient-to-b from-blue-100 via-indigo-50 to-blue-200 border-r sticky top-[73px] shadow-lg backdrop-blur-md flex-shrink-0">
           <nav className="p-4 space-y-2">
             {[
               { id: 'dashboard', icon: 'home', label: 'Dashboard' },
@@ -611,15 +607,15 @@ const ClientDashboard = () => {
               { id: 'history', icon: 'history', label: 'Transaction History' },
               { id: 'support', icon: 'help', label: 'Support' }
             ].map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-200 flex items-center gap-3 ${
-                  activeTab === item.id
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
-                    : 'hover:bg-blue-50 text-blue-700 hover:text-indigo-700'
-                }`}
-              >
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-200 flex items-center gap-3 ${
+                activeTab === item.id
+                  ? 'bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-400 text-white shadow-lg border border-blue-400'
+                  : 'hover:bg-blue-100 text-blue-700 hover:text-indigo-700 border border-transparent'
+              }`}
+            >
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   {item.icon === 'home' && (<><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></>)}
                   {item.icon === 'coins' && (<><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></>)}
@@ -635,11 +631,14 @@ const ClientDashboard = () => {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-6">
-          <div className="max-w-6xl mx-auto">
+        <main className="flex-1 p-0 min-h-0 h-full w-full overflow-auto">
+          <div className="w-full h-full flex flex-col justify-start items-stretch">
             {/* Card background update for main content */}
-            <div className="bg-white/80 rounded-2xl shadow-xl p-6 backdrop-blur-md">
-              {renderContent()}
+            <div className="bg-gradient-to-br from-blue-50 via-white to-indigo-100 rounded-none shadow-2xl p-6 backdrop-blur-md border border-blue-200 w-full h-full flex flex-col justify-start items-stretch">
+              <div className="space-y-6 w-full h-full">
+                {/* All cards and text now use Tailwind utility classes for color and visibility */}
+                {renderContent()}
+              </div>
             </div>
           </div>
         </main>
