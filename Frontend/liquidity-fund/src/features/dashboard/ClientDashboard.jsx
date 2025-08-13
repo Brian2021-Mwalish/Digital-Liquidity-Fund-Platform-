@@ -18,13 +18,6 @@ const ClientDashboard = () => {
     { code: 'EUR', name: 'Euro', price: 1000, icon: 'EUR', color: 'bg-blue-700' },
     { code: 'USD', name: 'US Dollar', price: 1200, icon: 'USD', color: 'bg-green-600' }
   ];
-
-  const transactions = [
-    { id: 1, type: 'Rental', currency: 'USD', amount: 1200, status: 'Completed', date: '2024-01-15', return: 2400 },
-    { id: 2, type: 'Withdrawal', currency: 'EUR', amount: 2000, status: 'Pending', date: '2024-01-14', return: null },
-    { id: 3, type: 'Rental', currency: 'GBP', amount: 500, status: 'Active', date: '2024-01-13', return: 1000 },
-  ];
-
   // Timer component for active rentals
   const RentalTimer = ({ rental }) => {
     const [timeLeft, setTimeLeft] = useState(rental.timeLeft);
@@ -52,25 +45,53 @@ const ClientDashboard = () => {
       return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
+    // Map currency color to actual color value
+    const currencyColorMap = {
+      'bg-red-500': '#ef4444',
+      'bg-blue-500': '#3b82f6',
+      'bg-blue-600': '#2563eb',
+      'bg-red-600': '#dc2626',
+      'bg-blue-700': '#1d4ed8',
+      'bg-green-600': '#16a34a',
+    };
+    const mainColor = currencyColorMap[rental.currency.color] || '#2563eb';
+    const shadowColor = mainColor;
+    const secondaryColor = '#a5b4fc';
+
     return (
-      <div className="relative w-32 h-32 mx-auto">
-        <div className="absolute inset-0 rounded-full border-4 border-muted"></div>
-        <svg className="w-full h-full spin-timer" viewBox="0 0 100 100">
+      <div className="relative w-52 h-52 mx-auto">
+        <div className="absolute inset-0 rounded-full border-8 border-muted"></div>
+        <svg
+          className="w-full h-full animate-spin-slow"
+          viewBox="0 0 100 100"
+          style={{ transformOrigin: '50% 50%' }}
+        >
           <circle
             cx="50"
             cy="50"
             r="45"
             fill="none"
-            stroke="hsl(var(--primary))"
-            strokeWidth="8"
+            stroke={mainColor}
+            strokeWidth="16"
             strokeDasharray={`${progress * 2.83} 283`}
             strokeLinecap="round"
-            className="pulse-glow"
+            style={{ filter: `drop-shadow(0 0 16px ${shadowColor})`, transition: 'stroke-dasharray 0.3s' }}
+          />
+          <circle
+            cx="50"
+            cy="50"
+            r="38"
+            fill="none"
+            stroke={secondaryColor}
+            strokeWidth="6"
+            strokeDasharray="238 238"
+            strokeLinecap="round"
+            style={{ opacity: 0.3 }}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div className="text-lg font-bold text-primary">{formatTime(timeLeft)}</div>
-          <div className="text-sm text-muted-foreground">remaining</div>
+          <div className="text-2xl font-bold text-primary">{formatTime(timeLeft)}</div>
+          <div className="text-lg text-muted-foreground">remaining</div>
         </div>
       </div>
     );
@@ -343,7 +364,24 @@ const ClientDashboard = () => {
                       className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     />
                   </div>
-                  <button className="btn-primary-gradient w-full inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+                  <button 
+                    className="w-full inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-gradient-to-r from-green-500 via-green-600 to-green-400 text-white shadow-lg hover:scale-105 h-12 px-4 py-2 border-2 border-green-600"
+                    onClick={() => {
+                      // Simulate withdrawal process: create a new rental with 24h timer
+                      const withdrawalRental = {
+                        id: Date.now(),
+                        currency: { code: 'KES', name: 'Kenyan Shilling', color: 'bg-green-600' },
+                        amount: balance,
+                        timeLeft: 24 * 60 * 60, // 24 hours
+                        expectedReturn: balance,
+                        isWithdrawal: true
+                      };
+                      setActiveRentals([...activeRentals, withdrawalRental]);
+                      setActiveTab('rentals');
+                      window.alert('Withdrawal initiated! Your funds will be available after 24 hours.');
+                    }}
+                  >
+                    <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 7h10v10"/><path d="m7 17 10-10"/></svg>
                     Withdraw to M-Pesa
                   </button>
                 </div>
@@ -622,6 +660,7 @@ const ClientDashboard = () => {
                   {item.icon === 'clock' && (<><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></>)}
                   {item.icon === 'arrow-up' && (<><path d="M7 7h10v10"/><path d="m7 17 10-10"/></>)}
                   {item.icon === 'history' && (<><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></>)}
+                  {item.icon === 'referrals' && (<><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>)}
                   {item.icon === 'help' && (<><circle cx="12" cy="12" r="10"/><path d="m9 9a3 3 0 0 1 5.12-2.12l1.02.48a1 1 0 0 1 .86 1.48V9a3 3 0 1 1-6 0V8a1 1 0 0 1 .86-1.48l1.02-.48A3 3 0 0 1 15 9"/><path d="M12 17h.01"/></>)}
                 </svg>
                 {item.label}
@@ -648,5 +687,22 @@ const ClientDashboard = () => {
     </div>
   );
 };
+
+// Add custom spin animation for slow rotation
+// Tailwind doesn't have animate-spin-slow by default, so add it here
+if (typeof document !== 'undefined' && !document.getElementById('spin-slow-style')) {
+  const style = document.createElement('style');
+  style.id = 'spin-slow-style';
+  style.innerHTML = `
+    .animate-spin-slow {
+      animation: spin 2s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  `;
+  document.head.appendChild(style);
+}
 
 export default ClientDashboard;
