@@ -36,7 +36,6 @@ const AdminDashboard = () => {
   const [systemStatus, setSystemStatus] = useState('stable');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNav, setSelectedNav] = useState('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -68,7 +67,7 @@ const AdminDashboard = () => {
     { id: 'transactions', label: 'Transactions', icon: DollarSign },
     { id: 'reports', label: 'Reports & Analytics', icon: FileText },
     { id: 'settings', label: 'Settings', icon: Settings },
-    { id: 'support', label: 'Support & Helpdesk', icon: Headphones }
+    // { id: 'support', label: 'Support & Helpdesk', icon: Headphones }
   ];
 
   const keyMetrics = [
@@ -124,10 +123,10 @@ const AdminDashboard = () => {
 
   const recentActivities = [
     { type: 'signup', message: 'New user registration: john.doe@email.com', time: '2 min ago', status: 'success' },
-    { type: 'deposit', message: 'Large deposit: $50,000 - UserID: 12847', time: '5 min ago', status: 'success' },
+    { type: 'deposit', message: 'Large deposit: Kshs 50,000 - UserID: 12847', time: '5 min ago', status: 'success' },
     { type: 'alert', message: 'Overdue rental alert: BTC rental #4521', time: '12 min ago', status: 'warning' },
     { type: 'error', message: 'API timeout error on withdrawal service', time: '18 min ago', status: 'critical' },
-    { type: 'withdrawal', message: 'Withdrawal request: $25,000 - UserID: 9653', time: '25 min ago', status: 'warning' }
+    { type: 'withdrawal', message: 'Withdrawal request: Kshs 25,000 - UserID: 9653', time: '25 min ago', status: 'warning' }
   ];
 
   const topCurrencies = [
@@ -149,54 +148,40 @@ const AdminDashboard = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+  <div className="min-h-screen bg-gray-50 w-full m-0 p-0" style={{width: '100vw', overflowX: 'hidden'}}>
       {/* Header Card */}
-      <Card className="sticky top-0 z-50 rounded-none border-b shadow-sm">
-        <CardContent className="p-0">
-          <div className="flex items-center justify-between px-4 lg:px-6 py-4">
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="lg:hidden"
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-              >
-                <Menu className="w-5 h-5" />
-              </Button>
-              
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
-                  <Zap className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl lg:text-2xl font-bold text-gray-900">
-                    Prime Trades Admin
-                  </h1>
-                  <p className="text-sm text-gray-600 hidden sm:block">
-                    Real-time dashboard & analytics
-                  </p>
-                </div>
+  <Card className="rounded-none border-b shadow-sm w-full m-0 p-0" style={{backgroundColor: '#0a174e'}}>
+        <CardContent className="p-0 m-0">
+          <div className="flex items-center justify-between py-0 w-full m-0" style={{marginLeft: 0, marginRight: 0, paddingLeft: 0, paddingRight: 0}}>
+            {/* Left: Logo & Title */}
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-700 to-blue-500 rounded-lg flex items-center justify-center shadow-lg">
+                <Zap className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex flex-col justify-center">
+                <h1 className="text-2xl font-bold text-white leading-tight">Prime Trades Admin</h1>
+                <p className="text-lg text-blue-200 mt-1 font-medium">Real-time dashboard & analytics</p>
               </div>
             </div>
-            
-            <div className="flex items-center space-x-4">
-              <Card className="hidden sm:block">
-                <CardContent className="p-3">
-                  <div className="text-sm font-semibold text-gray-900">
-                    {currentTime.toLocaleTimeString()}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {currentTime.toLocaleDateString()}
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Badge className={`${getStatusColor(systemStatus)} text-white border-0`}>
+            {/* Center: System Status */}
+            <div className="hidden md:flex flex-col items-center mx-8">
+              <Badge className={`${getStatusColor(systemStatus)} text-white border-0 px-3 py-1 mb-1`}>
                 <div className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse" />
                 <span className="hidden sm:inline">{getStatusText(systemStatus)}</span>
                 <span className="sm:hidden">Status</span>
               </Badge>
-
+              <span className="text-xs text-blue-200">System Health</span>
+            </div>
+            {/* Right: Time & User */}
+            <div className="flex items-center gap-6">
+              <div className="hidden sm:block text-right">
+                <div className="text-sm font-semibold text-white">
+                  {currentTime.toLocaleTimeString()}
+                </div>
+                <div className="text-xs text-blue-200">
+                  {currentTime.toLocaleDateString()}
+                </div>
+              </div>
               <div className="w-10 h-10 bg-gradient-to-r from-pink-500 to-red-500 rounded-full flex items-center justify-center text-white font-bold cursor-pointer hover:scale-105 transition-transform">
                 AD
               </div>
@@ -205,74 +190,50 @@ const AdminDashboard = () => {
         </CardContent>
       </Card>
 
-      <div className="flex">
-        {/* Sidebar Card */}
-        <Card className={`
-          fixed lg:sticky top-0 left-0 z-40 w-16 h-screen pt-20 lg:pt-0 
-          transform transition-transform duration-300 ease-in-out rounded-none
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          lg:translate-x-0 lg:w-20 lg:h-[calc(100vh-81px)]
-          shadow-lg lg:shadow-none border-r
-        `}>
-          <CardContent className="p-4 lg:p-6 h-full">
-            <div className="flex items-center justify-between mb-6 lg:hidden">
-              <h2 className="text-lg font-semibold text-gray-900">Navigation</h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSidebarOpen(false)}
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
+  {/* Space between header and subheader */}
+  <div className="w-full" style={{height: '20px'}} />
+  {/* Subheader Navigation Bar */}
+  <div className="bg-white border-b shadow-sm w-full m-0 p-0">
+        <div className="flex items-center space-x-4 overflow-x-auto w-full m-0 p-0" style={{marginLeft: 0, marginRight: 0, paddingLeft: 0, paddingRight: 0}}>
+          <div className="relative m-0 p-0" style={{marginLeft: 0, marginRight: 0, paddingLeft: 0, paddingRight: 0}}>
+      {/* Add vertical space between header and subheader */}
+      <div className="w-full" style={{height: '16px'}} />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Search menu..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500 w-48"
+            />
+          </div>
+          <nav className="flex space-x-2 flex-1">
+            {filteredNavigation.map((item) => {
+              const Icon = item.icon;
+              const isActive = selectedNav === item.id;
+              return (
+                <Button
+                  key={item.id}
+                  onClick={() => setSelectedNav(item.id)}
+                  variant={isActive ? "default" : "ghost"}
+                  className={`flex items-center px-4 py-2 rounded transition-all duration-200 ${
+                    isActive 
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-blue-600'
+                  }`}
+                >
+                  <Icon className="w-5 h-5 mr-2" />
+                  {item.label}
+                </Button>
+              );
+            })}
+          </nav>
+        </div>
+      </div>
 
-            <div className="relative mb-6">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="Search menu..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-              />
-            </div>
-            
-            <nav className="space-y-2">
-              {filteredNavigation.map((item) => {
-                const Icon = item.icon;
-                const isActive = selectedNav === item.id;
-                return (
-                  <Button
-                    key={item.id}
-                    onClick={() => {
-                      setSelectedNav(item.id);
-                      setSidebarOpen(false);
-                    }}
-                    variant={isActive ? "default" : "ghost"}
-                    className={`w-full justify-start transition-all duration-200 ${
-                      isActive 
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md' 
-                        : 'text-gray-700 hover:bg-gray-100 hover:text-blue-600'
-                    }`}
-                  >
-                    <Icon className="w-5 h-5 mr-3" />
-                    {item.label}
-                  </Button>
-                );
-              })}
-            </nav>
-          </CardContent>
-        </Card>
-
-        {/* Overlay for mobile */}
-        {sidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black/50 z-30 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        {/* Main Content */}
-        <main className="flex-1 p-4 lg:p-8 space-y-6 lg:space-y-8">
+      {/* Main Content */}
+  {/* Add vertical space between subheader and main content */}
+  <div className="w-full" style={{height: '24px'}} />
+  <main className="flex-1 w-full m-0 p-0 space-y-6 lg:space-y-8" style={{marginLeft: 0, marginRight: 0, paddingLeft: 0, paddingRight: 0}}>
           {/* Key Metrics Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             {keyMetrics.map((metric, index) => {
@@ -414,14 +375,14 @@ const AdminDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   <Card className="bg-green-500 text-white border-0">
                     <CardContent className="p-6 text-center">
-                      <div className="text-3xl font-bold mb-2">$2.4M</div>
+                        <div className="text-3xl font-bold mb-2">Kshs 2.4M</div>
                       <div className="text-green-100 mb-1">Total Profits</div>
                       <div className="text-xs text-green-200">↑ 12.5% this month</div>
                     </CardContent>
                   </Card>
                   <Card className="bg-orange-500 text-white border-0">
                     <CardContent className="p-6 text-center">
-                      <div className="text-3xl font-bold mb-2">$580K</div>
+                        <div className="text-3xl font-bold mb-2">Kshs 580K</div>
                       <div className="text-orange-100 mb-1">Risk Exposure</div>
                       <div className="text-xs text-orange-200">↓ 3.2% this month</div>
                     </CardContent>
@@ -557,11 +518,10 @@ const AdminDashboard = () => {
               </div>
             </CardContent>
           </Card>
-        </main>
-      </div>
+  </main>
 
       {/* Footer Card */}
-      <Card className="rounded-none border-t border-b-0 mt-8">
+  <Card className="rounded-none border-t border-b-0 mt-8 w-full m-0 p-0" style={{marginLeft: 0, marginRight: 0, paddingLeft: 0, paddingRight: 0}}>
         <CardContent className="px-6 py-4">
           <div className="flex flex-col sm:flex-row items-center justify-between text-sm space-y-2 sm:space-y-0">
             <div className="flex flex-col sm:flex-row items-center space-y-1 sm:space-y-0 sm:space-x-4">
