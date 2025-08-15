@@ -8,9 +8,8 @@ import Footer from './components/Footer';
 const App = () => {
   const location = useLocation();
 
-  // Add '/home' here to show Navbar on Home.jsx
-  const showNavbar = location.pathname.startsWith('/home') ||
-                     location.pathname.startsWith('/dashboard') ||
+  // Remove '/home' - do NOT show Navbar on Home.jsx
+  const showNavbar = location.pathname.startsWith('/dashboard') ||
                      location.pathname.startsWith('/portfolio') ||
                      location.pathname.startsWith('/deposit') ||
                      location.pathname.startsWith('/withdraw') ||

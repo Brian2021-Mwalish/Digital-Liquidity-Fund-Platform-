@@ -41,9 +41,9 @@ const Login = () => {
 
       toast.success("Login successful!");
 
-      // Save token in localStorage if present
-      if (result.token) {
-        localStorage.setItem("token", result.token);
+      // Save JWT in localStorage for global use
+      if (result.token || result.access) {
+        localStorage.setItem("jwt", result.token || result.access);
       }
 
       // Debug: log the response to check is_superuser value

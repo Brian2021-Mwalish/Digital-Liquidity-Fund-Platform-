@@ -37,7 +37,19 @@ const Home = () => {
   const graphW = 400, graphH = 200;
 
   return (
-    <div className="fixed inset-0 w-screen h-screen min-h-screen min-w-screen bg-gradient-to-br from-blue-200 via-indigo-100 to-blue-400 flex flex-col items-stretch justify-center p-0 m-0 overflow-auto pt-20">
+    <div className="fixed inset-0 w-screen h-screen min-h-screen min-w-screen bg-gradient-to-br from-blue-200 via-indigo-100 to-blue-400 flex flex-col items-stretch justify-center p-0 m-0 overflow-auto pt-12">
+      {/* Dashboard back button top left */}
+      <div className="absolute left-6 top-6 z-50">
+        <Link
+          to="/client-dashboard"
+          className="flex items-center gap-2 bg-blue-900 text-white px-5 py-2 rounded-xl shadow-lg font-semibold text-base hover:bg-blue-700 transition"
+        >
+          <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+            <path d="M15 19l-7-7 7-7" />
+          </svg>
+          Dashboard
+        </Link>
+      </div>
       <div className="w-full h-full flex flex-col justify-center items-stretch py-12 px-0">
         <h1 className="text-4xl md:text-5xl font-bold mb-4 text-primary text-center w-full">Welcome to Liquidity Fund</h1>
         <p className="text-lg md:text-xl mb-8 text-muted-foreground w-full text-center">

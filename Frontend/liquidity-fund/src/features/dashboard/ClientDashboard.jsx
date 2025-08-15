@@ -1,4 +1,61 @@
 import React, { useState, useEffect } from 'react';
+import KYCForm from '../auth/KYCForm';
+
+// --- Profile Modal (popup) ---
+const ProfileModal = ({ show, onClose }) => {
+  const MOCK_USER = {
+    fullName: 'John Doe',
+    idNumber: '12345678',
+    dob: '1990-01-01',
+    phone: '0712345678',
+    address: '123 Main Street, Nairobi, Kenya',
+  };
+  const [formData, setFormData] = useState(MOCK_USER);
+  const [success, setSuccess] = useState(false);
+  if (!show) return null;
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setSuccess(false);
+  };
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setSuccess(true);
+  };
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60">
+      <div className="bg-white border border-blue-200 shadow-2xl rounded-2xl p-8 w-full max-w-xl relative">
+        <button className="absolute right-5 top-4 p-1 rounded-full bg-blue-50 hover:bg-blue-100" onClick={onClose}>
+          <svg className="h-5 w-5 text-blue-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+        <h2 className="text-3xl font-bold text-primary mb-6 text-center">Profile Information</h2>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block mb-1 font-medium text-primary">Full Name</label>
+            <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} required className="w-full px-4 py-2 border border-blue-200 rounded-lg bg-background text-primary focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          </div>
+          <div>
+            <label className="block mb-1 font-medium text-primary">National ID / Passport Number</label>
+            <input type="text" name="idNumber" value={formData.idNumber} onChange={handleChange} required className="w-full px-4 py-2 border border-blue-200 rounded-lg bg-background text-primary focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          </div>
+          <div>
+            <label className="block mb-1 font-medium text-primary">Date of Birth</label>
+            <input type="date" name="dob" value={formData.dob} onChange={handleChange} required className="w-full px-4 py-2 border border-blue-200 rounded-lg bg-background text-primary focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          </div>
+          <div>
+            <label className="block mb-1 font-medium text-primary">Phone Number</label>
+            <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required className="w-full px-4 py-2 border border-blue-200 rounded-lg bg-background text-primary focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          </div>
+          <div>
+            <label className="block mb-1 font-medium text-primary">Residential Address</label>
+            <textarea name="address" value={formData.address} onChange={handleChange} required className="w-full px-4 py-2 border border-blue-200 rounded-lg bg-background text-primary focus:outline-none focus:ring-2 focus:ring-blue-400" rows="3"></textarea>
+          </div>
+          <button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 text-white py-2.5 rounded-lg font-semibold text-lg transition shadow-md">Save Profile</button>
+          {success && <div className="text-green-600 font-semibold text-center">Profile updated successfully!</div>}
+        </form>
+      </div>
+    </div>
+  );
+};
 
 const ClientDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -7,6 +64,7 @@ const ClientDashboard = () => {
   const [activeRentals, setActiveRentals] = useState([]);
   const [balance, setBalance] = useState(25000);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [notifications] = useState(3);
 
   // Sample data
@@ -638,7 +696,10 @@ const ClientDashboard = () => {
               {showProfileDropdown && (
                 <div className="absolute right-0 mt-2 w-48 bg-blue-900 border border-blue-700 rounded-lg shadow-lg z-50">
                   <div className="p-2">
-                    <button className="w-full text-left px-3 py-2 hover:bg-blue-800 rounded-md flex items-center gap-2 text-white">
+                    <button
+                      onClick={() => setShowProfileDropdown(false) || setShowProfileModal(true)}
+                      className="w-full text-left px-3 py-2 hover:bg-blue-800 rounded-md flex items-center gap-2 text-white"
+                    >
                       <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
                       </svg>
@@ -728,6 +789,23 @@ const ClientDashboard = () => {
       </div>
 
       <PaymentModal />
+      {showProfileModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60">
+          <div className="bg-white border border-blue-200 shadow-2xl rounded-2xl p-0 w-full max-w-xl relative">
+            <div className="absolute -right-5 -top-5">
+              <button
+                aria-label="Close"
+                className="p-2 rounded-full shadow-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white hover:bg-gradient-to-br hover:from-blue-700 hover:to-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 opacity-95 hover:scale-105"
+                style={{ boxShadow: '0 2px 8px rgba(37, 99, 235, 0.14)' }}
+                onClick={() => setShowProfileModal(false)}
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <KYCForm />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
