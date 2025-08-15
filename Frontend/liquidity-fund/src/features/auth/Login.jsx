@@ -41,20 +41,21 @@ const Login = () => {
 
       toast.success("Login successful!");
 
-      // Save JWT in localStorage for global use
+      // Save JWT in localStorage ONLY as 'jwt' for global use and always redirect after storing it
       if (result.token || result.access) {
         localStorage.setItem("jwt", result.token || result.access);
+        if (result.name) {
+          localStorage.setItem("client_name", result.name);
+        }
+        if (result.is_superuser === 1) {
+          navigate("/admin-dashboard");
+        } else {
+          navigate("/client-dashboard");
+        }
+        return;
       }
-
-      // Debug: log the response to check is_superuser value
-      console.log("Login response:", result);
-
-      // Admin redirect: backend returns is_superuser as integer (1 for admin, 0 for others)
-      if (result.is_superuser === 1) {
-        navigate("/admin-dashboard");
-      } else {
-        navigate("/client-dashboard");
-      }
+      // If for some reason token not present, show error
+      throw new Error("Invalid login. No access token returned. Contact support.");
     } catch (error) {
       toast.error(error.message);
     }

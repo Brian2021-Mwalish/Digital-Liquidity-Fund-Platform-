@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from decouple import config
+from datetime import timedelta
 
 # -------------------
 # Paths
@@ -24,6 +25,7 @@ INSTALLED_APPS = [
     
     # Third party
     'rest_framework',
+    'rest_framework_simplejwt',
     'corsheaders',
 
     # Your apps
@@ -66,10 +68,10 @@ TEMPLATES = [
 WSGI_APPLICATION = 'Liquidity.wsgi.application'
 
 # -------------------
-
 # URL of your frontend app
 FRONTEND_URL = "http://localhost:5173"  # or your actual frontend domain
 
+# -------------------
 # 💾 PostgreSQL Database
 DATABASES = {
     'default': {
@@ -118,16 +120,32 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'Users.CustomUser'
 
 # -------------------
-# Django REST Framework (no JWT)
+# Django REST Framework with JWT
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.IsAuthenticated',
     ],
+}
+
+# -------------------
+# Simple JWT Settings
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),  # 1 hour
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),     # 7 days
+    'ROTATE_REFRESH_TOKENS': False,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
 }
 
 # -------------------
 # CORS
 CORS_ALLOW_ALL_ORIGINS = True
+# If you want to restrict:
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:5173",
+#     "http://127.0.0.1:5173"
+# ]

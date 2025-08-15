@@ -22,10 +22,9 @@ const KYCForm = () => {
         setFetching(true);
         setError(null);
         // Replace this with your real DRF user API endpoint
-        const res = await fetch('/api/user/accounts/me/', {
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' }
-        });
+        // Use apiFetch for Authorization JWT header
+        const { apiFetch } = await import('../../lib/api');
+        const res = await apiFetch('/api/user/accounts/me/');
         if (!res.ok) throw new Error('Failed to fetch user.');
         const data = await res.json();
         setFormData(formData => ({
@@ -76,10 +75,9 @@ const KYCForm = () => {
 
     try {
       // Replace with your real backend endpoint
-      const res = await fetch('/api/user/accounts/me/', {
+      const { apiFetch } = await import('../../lib/api');
+      const res = await apiFetch('/api/user/accounts/me/', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(toSend)
       });
       if (!res.ok) {

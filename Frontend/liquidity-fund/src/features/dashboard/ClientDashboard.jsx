@@ -66,6 +66,24 @@ const ClientDashboard = () => {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [notifications] = useState(3);
+  const [clientName, setClientName] = useState(localStorage.getItem('client_name') || '');
+
+  // Always try fetching name from API for freshness
+  useEffect(() => {
+    const fetchName = async () => {
+      try {
+        const { apiFetch } = await import('../../lib/api');
+        const res = await apiFetch('/api/user/accounts/me/');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.name || data.full_name) {
+          setClientName(data.name || data.full_name || '');
+          localStorage.setItem('client_name', data.name || data.full_name);
+        }
+      } catch {}
+    };
+    fetchName();
+  }, []);
 
   // Sample data
   const currencies = [
@@ -257,7 +275,9 @@ const ClientDashboard = () => {
         return (
           <div className="space-y-6">
             <div className="text-left">
-              <h1 className="text-3xl font-bold text-foreground">Welcome back, John!</h1>
+              <h1 className="text-3xl font-bold text-foreground">
+                Welcome back{clientName ? `, ${clientName}` : ''}!
+              </h1>
               <p className="text-muted-foreground">Current Balance: <span className="text-2xl font-bold text-success">KES {balance.toLocaleString()}</span></p>
             </div>
 
@@ -712,7 +732,14 @@ const ClientDashboard = () => {
                       Settings
                     </button>
                     <div className="border-t my-1 border-blue-700"></div>
-                    <button className="w-full text-left px-3 py-2 hover:bg-blue-800 rounded-md flex items-center gap-2 text-red-400">
+                    <button 
+                      className="w-full text-left px-3 py-2 hover:bg-blue-800 rounded-md flex items-center gap-2 text-red-400"
+                      onClick={() => {
+                        localStorage.removeItem('jwt');
+                        localStorage.removeItem('client_name');
+                        window.location.href = '/login';
+                      }}
+                    >
                       <svg className="w-4 h-4 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" x2="9" y1="12" y2="12"/>
                       </svg>

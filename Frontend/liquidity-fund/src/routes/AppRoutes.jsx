@@ -18,6 +18,7 @@ import KYCForm from "../features/auth/KYCForm";
 import ClientDashboard from "../features/dashboard/ClientDashboard";
 import AdminDashboard from "../features/dashboard/AdminDashboard";
 import WithdrawalForm from "../features/transactions/Withdraw";
+import RequireAuth from "./RequireAuth";
 
 // Slide animation variants
 const slideVariants = {
@@ -65,7 +66,11 @@ const AppRoutes = () => {
         {/* Dashboard Routes */}
         <Route
           path="/client-dashboard"
-          element={<PageWrapper><ClientDashboard /></PageWrapper>}
+          element={
+            <RequireAuth>
+              <PageWrapper><ClientDashboard /></PageWrapper>
+            </RequireAuth>
+          }
         />
         <Route
           path="/withdraw"
