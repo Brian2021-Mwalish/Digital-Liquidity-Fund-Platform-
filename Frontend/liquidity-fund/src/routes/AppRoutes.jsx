@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import LandingPage from "../pages/LandingPage";
 import About from "../pages/About";
 import Contact from "../pages/Contact";
+import Home from "../pages/Home";
 import NotFound from "../pages/NotFound";
 
 // Auth
@@ -16,6 +17,7 @@ import KYCForm from "../features/auth/KYCForm";
 // Dashboards
 import ClientDashboard from "../features/dashboard/ClientDashboard";
 import AdminDashboard from "../features/dashboard/AdminDashboard";
+import WithdrawalForm from "../features/transactions/Withdraw";
 
 // Slide animation variants
 const slideVariants = {
@@ -55,6 +57,7 @@ const AppRoutes = () => {
         <Route path="/" element={<PageWrapper><LandingPage /></PageWrapper>} />
         <Route path="/about" element={<PageWrapper><About /></PageWrapper>} />
         <Route path="/contact" element={<PageWrapper><Contact /></PageWrapper>} />
+        <Route path="/home" element={<PageWrapper><Home /></PageWrapper>} />
         <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
         <Route path="/register" element={<PageWrapper><Register /></PageWrapper>} />
         <Route path="/kyc" element={<PageWrapper><KYCForm /></PageWrapper>} />
@@ -63,6 +66,10 @@ const AppRoutes = () => {
         <Route
           path="/client-dashboard"
           element={<PageWrapper><ClientDashboard /></PageWrapper>}
+        />
+        <Route
+          path="/withdraw"
+          element={<PageWrapper><WithdrawalForm /></PageWrapper>}
         />
         <Route
           path="/admin-dashboard"

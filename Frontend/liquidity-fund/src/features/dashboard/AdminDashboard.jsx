@@ -11,7 +11,6 @@ import {
   Users,
   AlertTriangle,
   Activity,
-  DollarSign,
   Search,
   Bell,
   Settings,
@@ -26,10 +25,18 @@ import {
   XCircle,
   AlertCircle,
   ArrowUp,
+
   ArrowDown,
   Menu,
   X
 } from 'lucide-react';
+
+// Custom Kenyan Shilling SVG icon
+const KshIcon = (props) => (
+  <svg width={props.width || 20} height={props.height || 20} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+    <text x="2" y="16" fontSize="16" fontWeight="bold" fill="currentColor">Ksh</text>
+  </svg>
+);
 
 const AdminDashboard = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -61,12 +68,12 @@ const AdminDashboard = () => {
   };
 
   const navigationItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-    { id: 'clients', label: 'Client Management', icon: Users },
-    { id: 'rentals', label: 'Rental Management', icon: Database },
-    { id: 'transactions', label: 'Transactions', icon: DollarSign },
-    { id: 'reports', label: 'Reports & Analytics', icon: FileText },
-    { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+  { id: 'clients', label: 'Client Management', icon: Users },
+  { id: 'rentals', label: 'Rental Management', icon: Database },
+  { id: 'transactions', label: 'Transactions', icon: KshIcon },
+  { id: 'reports', label: 'Reports & Analytics', icon: FileText },
+  { id: 'settings', label: 'Settings', icon: Settings }
     // { id: 'support', label: 'Support & Helpdesk', icon: Headphones }
   ];
 
@@ -150,9 +157,9 @@ const AdminDashboard = () => {
   return (
   <div className="min-h-screen bg-gray-50 w-full m-0 p-0" style={{width: '100vw', overflowX: 'hidden'}}>
       {/* Header Card */}
-  <Card className="rounded-none border-b shadow-sm w-full m-0 p-0" style={{backgroundColor: '#0a174e'}}>
-        <CardContent className="p-0 m-0">
-          <div className="flex items-center justify-between py-0 w-full m-0" style={{marginLeft: 0, marginRight: 0, paddingLeft: 0, paddingRight: 0}}>
+  <Card className="rounded-none border-b shadow-sm w-full m-0 p-0" style={{backgroundColor: '#001f3f'}}>
+        <CardContent className="p-0 m-0" style={{backgroundColor: '#001f3f'}}>
+          <div className="flex items-center justify-between py-0 w-full m-0" style={{marginLeft: 0, marginRight: 0, paddingLeft: 0, paddingRight: 0, backgroundColor: '#001f3f'}}>
             {/* Left: Logo & Title */}
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-gradient-to-r from-blue-700 to-blue-500 rounded-lg flex items-center justify-center shadow-lg">
@@ -521,7 +528,7 @@ const AdminDashboard = () => {
   </main>
 
       {/* Footer Card */}
-  <Card className="rounded-none border-t border-b-0 mt-8 w-full m-0 p-0" style={{marginLeft: 0, marginRight: 0, paddingLeft: 0, paddingRight: 0}}>
+  <Card className="rounded-none border-t border-b-0 mt-8 w-full m-0 p-0" style={{marginLeft: 0, marginRight: 0, paddingLeft: 0, paddingRight: 0, width: '100vw', left: 0, right: 0, position: 'relative'}}>
         <CardContent className="px-6 py-4">
           <div className="flex flex-col sm:flex-row items-center justify-between text-sm space-y-2 sm:space-y-0">
             <div className="flex flex-col sm:flex-row items-center space-y-1 sm:space-y-0 sm:space-x-4">

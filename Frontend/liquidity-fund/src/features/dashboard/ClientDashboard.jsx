@@ -162,6 +162,38 @@ const ClientDashboard = () => {
   );
 
   const renderContent = () => {
+    if (activeTab === 'wallet') {
+      // Wallet Tab Code
+      const doubledMoney = activeRentals.reduce(
+        (sum, rental) => sum + (rental.expectedReturn || 0), 0
+      );
+      return (
+        <div className="space-y-6">
+          <div className="text-left">
+            <h2 className="text-3xl font-bold text-foreground mb-4">Wallet</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="currency-card rounded-lg border bg-card text-card-foreground shadow-sm">
+              <div className="flex flex-col space-y-1.5 p-6 pb-2">
+                <h3 className="text-xl text-muted-foreground">Current Balance</h3>
+              </div>
+              <div className="p-6 pt-0">
+                <div className="text-3xl font-bold text-success">KES {balance.toLocaleString()}</div>
+              </div>
+            </div>
+            <div className="currency-card rounded-lg border bg-card text-card-foreground shadow-sm">
+              <div className="flex flex-col space-y-1.5 p-6 pb-2">
+                <h3 className="text-xl text-muted-foreground">Doubled Money</h3>
+              </div>
+              <div className="p-6 pt-0">
+                <div className="text-3xl font-bold text-primary">KES {doubledMoney.toLocaleString()}</div>
+                <p className="text-xs text-muted-foreground">Money that has been doubled from rentals</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
     switch (activeTab) {
       case 'dashboard':
         return (
@@ -639,15 +671,22 @@ const ClientDashboard = () => {
           <nav className="p-4 space-y-2">
             {[
               { id: 'dashboard', icon: 'home', label: 'Dashboard' },
+              { id: 'wallet', icon: 'wallet', label: 'Wallet' },
               { id: 'rent', icon: 'coins', label: 'Rent Currency' },
               { id: 'rentals', icon: 'clock', label: 'My Rentals' },
-              { id: 'withdraw', icon: 'arrow-up', label: 'Withdraw Funds' },
-              { id: 'history', icon: 'history', label: 'Transaction History' },
+              { id: 'withdraw', icon: 'arrow-up', label: 'Withdraw Funds', link: '/withdraw' },
+              { id: 'history', icon: 'history', label: 'Transaction History', link: '/home' },
               { id: 'support', icon: 'help', label: 'Support' }
             ].map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => {
+                if (item.link) {
+                  window.location.href = item.link;
+                } else {
+                  setActiveTab(item.id);
+                }
+              }}
               className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-200 flex items-center gap-3 ${
                 activeTab === item.id
                   ? 'bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-400 text-white shadow-lg border border-blue-400'
@@ -656,6 +695,11 @@ const ClientDashboard = () => {
             >
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   {item.icon === 'home' && (<><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></>)}
+                  {item.icon === 'wallet' && (
+                    <><rect x="4" y="7" width="16" height="9" rx="2"/>
+                    <path d="M20 7V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v2"/>
+                    <circle cx="16" cy="12" r="1.5"/></>
+                  )}
                   {item.icon === 'coins' && (<><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></>)}
                   {item.icon === 'clock' && (<><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></>)}
                   {item.icon === 'arrow-up' && (<><path d="M7 7h10v10"/><path d="m7 17 10-10"/></>)}
