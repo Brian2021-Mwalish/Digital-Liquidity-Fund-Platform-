@@ -11,12 +11,6 @@ const ClientDashboard = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [notifications] = useState(3);
   const [clientName, setClientName] = useState(localStorage.getItem('client_name') || '');
-  
-  // Payment states
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [paymentError, setPaymentError] = useState('');
-  const [phoneError, setPhoneError] = useState('');
 
   // Always try fetching name from API for freshness
   useEffect(() => {
@@ -35,99 +29,6 @@ const ClientDashboard = () => {
     fetchName();
   }, []);
 
-  // Payment API function
-  const startPayment = async (phoneNumber, currencyCode) => {
-    const response = await fetch("/api/payments/stk-push/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        phone_number: phoneNumber,
-        currency_code: currencyCode,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || "Payment failed");
-    }
-
-    return await response.json();
-  };
-
-  // Validate phone number
-  const validatePhoneNumber = (phone) => {
-    const phoneRegex = /^07\d{8}$/;
-    if (!phone) {
-      return 'Phone number is required';
-    }
-    if (!phoneRegex.test(phone)) {
-      return 'Please enter a valid phone number (07xxxxxxxx)';
-    }
-    return '';
-  };
-
-  // Handle payment submission
-  const handleSubmit = async () => {
-    if (!phoneNumber) {
-      setPhoneError('Please enter your phone number');
-      return;
-    }
-
-    const phoneValidation = validatePhoneNumber(phoneNumber);
-    if (phoneValidation) {
-      setPhoneError(phoneValidation);
-      return;
-    }
-
-    setLoading(true);
-    setPaymentError('');
-    setPhoneError('');
-    
-    try {
-      const data = await startPayment(phoneNumber, selectedCurrency.code);
-      alert(`STK push of ${data.amount} KES sent to ${phoneNumber}. Check your phone.`);
-      
-      // Add to active rentals
-      const newRental = {
-        id: Date.now(),
-        currency: selectedCurrency,
-        amount: selectedCurrency.price,
-        timeLeft: 24 * 60 * 60, // 24 hours
-        expectedReturn: selectedCurrency.price * 2,
-        status: 'paid'
-      };
-      setActiveRentals([...activeRentals, newRental]);
-      setShowPaymentModal(false);
-      setActiveTab('rentals');
-      setPhoneNumber('');
-    } catch (err) {
-      setPaymentError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle phone number input change
-  const handlePhoneChange = (e) => {
-    const value = e.target.value;
-    setPhoneNumber(value);
-    
-    // Clear errors when user starts typing
-    if (phoneError) setPhoneError('');
-    if (paymentError) setPaymentError('');
-    
-    // Real-time validation
-    if (value && !value.startsWith('07')) {
-      setPhoneError('Phone number must start with 07');
-    } else if (value.length > 10) {
-      setPhoneError('Phone number is too long');
-    } else {
-      setPhoneError('');
-    }
-  };
-
   // Sample data
   const currencies = [
     { code: 'CAD', name: 'Canadian Dollar', price: 100, icon: 'CAD', color: 'bg-red-500' },
@@ -137,7 +38,6 @@ const ClientDashboard = () => {
     { code: 'EUR', name: 'Euro', price: 1000, icon: 'EUR', color: 'bg-blue-700' },
     { code: 'USD', name: 'US Dollar', price: 1200, icon: 'USD', color: 'bg-green-600' }
   ];
-
   // Timer component for active rentals
   const RentalTimer = ({ rental }) => {
     const [timeLeft, setTimeLeft] = useState(rental.timeLeft);
@@ -182,7 +82,7 @@ const ClientDashboard = () => {
       <div className="relative w-52 h-52 mx-auto">
         <div className="absolute inset-0 rounded-full border-8 border-muted"></div>
         <svg
-          className={`w-full h-full ${rental.status === 'paid' ? 'animate-spin' : 'animate-spin-slow'}`}
+          className="w-full h-full animate-spin-slow"
           viewBox="0 0 100 100"
           style={{ transformOrigin: '50% 50%' }}
         >
@@ -212,9 +112,6 @@ const ClientDashboard = () => {
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <div className="text-2xl font-bold text-primary">{formatTime(timeLeft)}</div>
           <div className="text-lg text-muted-foreground">remaining</div>
-          {rental.status === 'paid' && (
-            <div className="text-xs text-success font-medium mt-1">Payment Confirmed</div>
-          )}
         </div>
       </div>
     );
@@ -223,7 +120,7 @@ const ClientDashboard = () => {
   // Payment Modal Component
   const PaymentModal = () => (
     <div className={`fixed inset-0 z-50 ${showPaymentModal ? 'flex' : 'hidden'} items-center justify-center`}>
-      <div className="fixed inset-0 bg-black/80" onClick={() => !loading && setShowPaymentModal(false)}></div>
+      <div className="fixed inset-0 bg-black/80" onClick={() => setShowPaymentModal(false)}></div>
       <div className="relative bg-gradient-to-br from-green-50 via-white to-green-200 border-2 border-green-500 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
         <div className="mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -236,78 +133,50 @@ const ClientDashboard = () => {
             <div className="text-3xl font-bold text-accent">KES {selectedCurrency?.price}</div>
             <div className="text-muted-foreground">Expected Return: KES {selectedCurrency?.price * 2}</div>
           </div>
-          
-          {/* Error Messages */}
-          {paymentError && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
-              <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {paymentError}
-              </div>
-            </div>
-          )}
-          
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">M-Pesa Phone Number</label>
+            <label className="text-sm font-medium">M-Pesa Phone Number</label>
             <input 
               type="text" 
-              value={phoneNumber}
-              onChange={handlePhoneChange}
-              placeholder="0714137834" 
-              disabled={loading}
-              className={`w-full px-3 py-2 border rounded-md text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${
-                phoneError 
-                  ? 'border-red-300 bg-red-50 focus:ring-red-500' 
-                  : 'border-input bg-background focus:ring-ring'
-              } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              placeholder="254712345678" 
+              className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             />
-            {phoneError && (
-              <div className="text-red-600 text-xs flex items-center gap-1">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {phoneError}
-              </div>
-            )}
           </div>
-          
           <div className="flex gap-2">
             <button 
-              onClick={handleSubmit}
-              disabled={loading || !phoneNumber || phoneError}
+              onClick={() => {
+                // Simulate payment process
+                const newRental = {
+                  id: Date.now(),
+                  currency: selectedCurrency,
+                  amount: selectedCurrency.price,
+                  timeLeft: 24 * 60 * 60, // 24 hours
+                  expectedReturn: selectedCurrency.price * 2
+                };
+                setActiveRentals([...activeRentals, newRental]);
+                setShowPaymentModal(false);
+                setActiveTab('rentals');
+              }}
               className="btn-currency flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
             >
-              {loading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Processing...
-                </div>
-              ) : (
-                'Pay with M-Pesa'
-              )}
+              Pay with M-Pesa
             </button>
             <button 
-              onClick={() => !loading && setShowPaymentModal(false)}
-              disabled={loading}
+              onClick={() => setShowPaymentModal(false)}
               className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
             >
               Cancel
             </button>
           </div>
         </div>
-        {!loading && (
-          <button 
-            onClick={() => setShowPaymentModal(false)}
-            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-          >
-            <span className="sr-only">Close</span>
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m18 6-12 12M6 6l12 12"/>
-            </svg>
-          </button>
-        )}
+        <button 
+          onClick={() => setShowPaymentModal(false)}
+          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        >
+          <span className="sr-only">Close</span>
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m18 6-12 12M6 6l12 12"/>
+          </svg>
+        </button>
       </div>
     </div>
   );
@@ -423,9 +292,6 @@ const ClientDashboard = () => {
                 <div key={currency.code} className="currency-card cursor-pointer rounded-lg border bg-card text-card-foreground shadow-sm transition-all duration-300 hover:shadow-lg hover:scale-105" onClick={() => {
                   setSelectedCurrency(currency);
                   setShowPaymentModal(true);
-                  setPaymentError('');
-                  setPhoneError('');
-                  setPhoneNumber('');
                 }}>
                   <div className="flex flex-col space-y-1.5 p-6 text-center">
                     <div className="text-4xl mb-2 font-bold">{currency.code}</div>
@@ -470,15 +336,7 @@ const ClientDashboard = () => {
                           <div className="space-y-1 text-sm">
                             <div>Investment: <span className="font-medium">KES {rental.amount}</span></div>
                             <div>Expected Return: <span className="font-medium text-success">KES {rental.expectedReturn}</span></div>
-                            <div>Status: 
-                              <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ml-2 ${
-                                rental.status === 'paid' 
-                                  ? 'bg-green-100 text-green-800 border-green-300' 
-                                  : 'bg-warning text-warning-foreground'
-                              }`}>
-                                {rental.status === 'paid' ? 'Paid & Active' : 'Active'}
-                              </span>
-                            </div>
+                            <div>Status: <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 bg-warning text-warning-foreground">Active</span></div>
                           </div>
                         </div>
                         <button 
