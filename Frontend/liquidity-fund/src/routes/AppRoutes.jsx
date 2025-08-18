@@ -5,7 +5,6 @@ import { AnimatePresence, motion } from "framer-motion";
 // Pages
 import LandingPage from "../pages/LandingPage";
 import About from "../pages/About";
-import Contact from "../pages/Contact";
 import Home from "../pages/Home";
 import NotFound from "../pages/NotFound";
 
@@ -57,7 +56,6 @@ const AppRoutes = () => {
       <Routes location={location} key={location.pathname}>
         <Route path="/" element={<PageWrapper><LandingPage /></PageWrapper>} />
         <Route path="/about" element={<PageWrapper><About /></PageWrapper>} />
-        <Route path="/contact" element={<PageWrapper><Contact /></PageWrapper>} />
         <Route path="/home" element={<PageWrapper><Home /></PageWrapper>} />
         <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
         <Route path="/register" element={<PageWrapper><Register /></PageWrapper>} />

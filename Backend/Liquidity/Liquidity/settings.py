@@ -28,8 +28,9 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
 
-    # Your apps
-    'Users',  # Your custom user app
+    #  apps
+    'Users', 
+    "payment", 
 ]
 
 # -------------------
