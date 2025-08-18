@@ -1,62 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import KYCForm from '../auth/KYCForm';
 
-// --- Profile Modal (popup) ---
-const ProfileModal = ({ show, onClose }) => {
-  const MOCK_USER = {
-    fullName: 'John Doe',
-    idNumber: '12345678',
-    dob: '1990-01-01',
-    phone: '0712345678',
-    address: '123 Main Street, Nairobi, Kenya',
-  };
-  const [formData, setFormData] = useState(MOCK_USER);
-  const [success, setSuccess] = useState(false);
-  if (!show) return null;
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setSuccess(false);
-  };
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setSuccess(true);
-  };
-  return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60">
-      <div className="bg-white border border-blue-200 shadow-2xl rounded-2xl p-8 w-full max-w-xl relative">
-        <button className="absolute right-5 top-4 p-1 rounded-full bg-blue-50 hover:bg-blue-100" onClick={onClose}>
-          <svg className="h-5 w-5 text-blue-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg>
-        </button>
-        <h2 className="text-3xl font-bold text-primary mb-6 text-center">Profile Information</h2>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block mb-1 font-medium text-primary">Full Name</label>
-            <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} required className="w-full px-4 py-2 border border-blue-200 rounded-lg bg-background text-primary focus:outline-none focus:ring-2 focus:ring-blue-400" />
-          </div>
-          <div>
-            <label className="block mb-1 font-medium text-primary">National ID / Passport Number</label>
-            <input type="text" name="idNumber" value={formData.idNumber} onChange={handleChange} required className="w-full px-4 py-2 border border-blue-200 rounded-lg bg-background text-primary focus:outline-none focus:ring-2 focus:ring-blue-400" />
-          </div>
-          <div>
-            <label className="block mb-1 font-medium text-primary">Date of Birth</label>
-            <input type="date" name="dob" value={formData.dob} onChange={handleChange} required className="w-full px-4 py-2 border border-blue-200 rounded-lg bg-background text-primary focus:outline-none focus:ring-2 focus:ring-blue-400" />
-          </div>
-          <div>
-            <label className="block mb-1 font-medium text-primary">Phone Number</label>
-            <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required className="w-full px-4 py-2 border border-blue-200 rounded-lg bg-background text-primary focus:outline-none focus:ring-2 focus:ring-blue-400" />
-          </div>
-          <div>
-            <label className="block mb-1 font-medium text-primary">Residential Address</label>
-            <textarea name="address" value={formData.address} onChange={handleChange} required className="w-full px-4 py-2 border border-blue-200 rounded-lg bg-background text-primary focus:outline-none focus:ring-2 focus:ring-blue-400" rows="3"></textarea>
-          </div>
-          <button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 text-white py-2.5 rounded-lg font-semibold text-lg transition shadow-md">Save Profile</button>
-          {success && <div className="text-green-600 font-semibold text-center">Profile updated successfully!</div>}
-        </form>
-      </div>
-    </div>
-  );
-};
-
 const ClientDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -67,6 +11,12 @@ const ClientDashboard = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [notifications] = useState(3);
   const [clientName, setClientName] = useState(localStorage.getItem('client_name') || '');
+  
+  // Payment states
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
 
   // Always try fetching name from API for freshness
   useEffect(() => {
@@ -85,6 +35,99 @@ const ClientDashboard = () => {
     fetchName();
   }, []);
 
+  // Payment API function
+  const startPayment = async (phoneNumber, currencyCode) => {
+    const response = await fetch("/api/payments/stk-push/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        phone_number: phoneNumber,
+        currency_code: currencyCode,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || "Payment failed");
+    }
+
+    return await response.json();
+  };
+
+  // Validate phone number
+  const validatePhoneNumber = (phone) => {
+    const phoneRegex = /^07\d{8}$/;
+    if (!phone) {
+      return 'Phone number is required';
+    }
+    if (!phoneRegex.test(phone)) {
+      return 'Please enter a valid phone number (07xxxxxxxx)';
+    }
+    return '';
+  };
+
+  // Handle payment submission
+  const handleSubmit = async () => {
+    if (!phoneNumber) {
+      setPhoneError('Please enter your phone number');
+      return;
+    }
+
+    const phoneValidation = validatePhoneNumber(phoneNumber);
+    if (phoneValidation) {
+      setPhoneError(phoneValidation);
+      return;
+    }
+
+    setLoading(true);
+    setPaymentError('');
+    setPhoneError('');
+    
+    try {
+      const data = await startPayment(phoneNumber, selectedCurrency.code);
+      alert(`STK push of ${data.amount} KES sent to ${phoneNumber}. Check your phone.`);
+      
+      // Add to active rentals
+      const newRental = {
+        id: Date.now(),
+        currency: selectedCurrency,
+        amount: selectedCurrency.price,
+        timeLeft: 24 * 60 * 60, // 24 hours
+        expectedReturn: selectedCurrency.price * 2,
+        status: 'paid'
+      };
+      setActiveRentals([...activeRentals, newRental]);
+      setShowPaymentModal(false);
+      setActiveTab('rentals');
+      setPhoneNumber('');
+    } catch (err) {
+      setPaymentError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle phone number input change
+  const handlePhoneChange = (e) => {
+    const value = e.target.value;
+    setPhoneNumber(value);
+    
+    // Clear errors when user starts typing
+    if (phoneError) setPhoneError('');
+    if (paymentError) setPaymentError('');
+    
+    // Real-time validation
+    if (value && !value.startsWith('07')) {
+      setPhoneError('Phone number must start with 07');
+    } else if (value.length > 10) {
+      setPhoneError('Phone number is too long');
+    } else {
+      setPhoneError('');
+    }
+  };
+
   // Sample data
   const currencies = [
     { code: 'CAD', name: 'Canadian Dollar', price: 100, icon: 'CAD', color: 'bg-red-500' },
@@ -94,6 +137,7 @@ const ClientDashboard = () => {
     { code: 'EUR', name: 'Euro', price: 1000, icon: 'EUR', color: 'bg-blue-700' },
     { code: 'USD', name: 'US Dollar', price: 1200, icon: 'USD', color: 'bg-green-600' }
   ];
+
   // Timer component for active rentals
   const RentalTimer = ({ rental }) => {
     const [timeLeft, setTimeLeft] = useState(rental.timeLeft);
@@ -138,7 +182,7 @@ const ClientDashboard = () => {
       <div className="relative w-52 h-52 mx-auto">
         <div className="absolute inset-0 rounded-full border-8 border-muted"></div>
         <svg
-          className="w-full h-full animate-spin-slow"
+          className={`w-full h-full ${rental.status === 'paid' ? 'animate-spin' : 'animate-spin-slow'}`}
           viewBox="0 0 100 100"
           style={{ transformOrigin: '50% 50%' }}
         >
@@ -168,6 +212,9 @@ const ClientDashboard = () => {
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <div className="text-2xl font-bold text-primary">{formatTime(timeLeft)}</div>
           <div className="text-lg text-muted-foreground">remaining</div>
+          {rental.status === 'paid' && (
+            <div className="text-xs text-success font-medium mt-1">Payment Confirmed</div>
+          )}
         </div>
       </div>
     );
@@ -176,7 +223,7 @@ const ClientDashboard = () => {
   // Payment Modal Component
   const PaymentModal = () => (
     <div className={`fixed inset-0 z-50 ${showPaymentModal ? 'flex' : 'hidden'} items-center justify-center`}>
-      <div className="fixed inset-0 bg-black/80" onClick={() => setShowPaymentModal(false)}></div>
+      <div className="fixed inset-0 bg-black/80" onClick={() => !loading && setShowPaymentModal(false)}></div>
       <div className="relative bg-gradient-to-br from-green-50 via-white to-green-200 border-2 border-green-500 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
         <div className="mb-4">
           <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -189,50 +236,78 @@ const ClientDashboard = () => {
             <div className="text-3xl font-bold text-accent">KES {selectedCurrency?.price}</div>
             <div className="text-muted-foreground">Expected Return: KES {selectedCurrency?.price * 2}</div>
           </div>
+          
+          {/* Error Messages */}
+          {paymentError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {paymentError}
+              </div>
+            </div>
+          )}
+          
           <div className="space-y-2">
-            <label className="text-sm font-medium">M-Pesa Phone Number</label>
+            <label className="text-sm font-medium text-gray-700">M-Pesa Phone Number</label>
             <input 
               type="text" 
-              placeholder="254712345678" 
-              className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              value={phoneNumber}
+              onChange={handlePhoneChange}
+              placeholder="0714137834" 
+              disabled={loading}
+              className={`w-full px-3 py-2 border rounded-md text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors ${
+                phoneError 
+                  ? 'border-red-300 bg-red-50 focus:ring-red-500' 
+                  : 'border-input bg-background focus:ring-ring'
+              } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
             />
+            {phoneError && (
+              <div className="text-red-600 text-xs flex items-center gap-1">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {phoneError}
+              </div>
+            )}
           </div>
+          
           <div className="flex gap-2">
             <button 
-              onClick={() => {
-                // Simulate payment process
-                const newRental = {
-                  id: Date.now(),
-                  currency: selectedCurrency,
-                  amount: selectedCurrency.price,
-                  timeLeft: 24 * 60 * 60, // 24 hours
-                  expectedReturn: selectedCurrency.price * 2
-                };
-                setActiveRentals([...activeRentals, newRental]);
-                setShowPaymentModal(false);
-                setActiveTab('rentals');
-              }}
+              onClick={handleSubmit}
+              disabled={loading || !phoneNumber || phoneError}
               className="btn-currency flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
             >
-              Pay with M-Pesa
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Processing...
+                </div>
+              ) : (
+                'Pay with M-Pesa'
+              )}
             </button>
             <button 
-              onClick={() => setShowPaymentModal(false)}
+              onClick={() => !loading && setShowPaymentModal(false)}
+              disabled={loading}
               className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
             >
               Cancel
             </button>
           </div>
         </div>
-        <button 
-          onClick={() => setShowPaymentModal(false)}
-          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-        >
-          <span className="sr-only">Close</span>
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m18 6-12 12M6 6l12 12"/>
-          </svg>
-        </button>
+        {!loading && (
+          <button 
+            onClick={() => setShowPaymentModal(false)}
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          >
+            <span className="sr-only">Close</span>
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m18 6-12 12M6 6l12 12"/>
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   );
@@ -332,26 +407,6 @@ const ClientDashboard = () => {
               </div>
             </div>
 
-            <div className="flex gap-4">
-              <button 
-                onClick={() => setActiveTab('rent')} 
-                className="btn-primary-gradient flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
-              >
-                <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/>
-                </svg>
-                Rent Currency Now
-              </button>
-              <button 
-                onClick={() => setActiveTab('withdraw')} 
-                className="flex-1 inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
-              >
-                <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M7 7h10v10"/><path d="m7 17 10-10"/>
-                </svg>
-                Withdraw Funds
-              </button>
-            </div>
           </div>
         );
 
@@ -368,6 +423,9 @@ const ClientDashboard = () => {
                 <div key={currency.code} className="currency-card cursor-pointer rounded-lg border bg-card text-card-foreground shadow-sm transition-all duration-300 hover:shadow-lg hover:scale-105" onClick={() => {
                   setSelectedCurrency(currency);
                   setShowPaymentModal(true);
+                  setPaymentError('');
+                  setPhoneError('');
+                  setPhoneNumber('');
                 }}>
                   <div className="flex flex-col space-y-1.5 p-6 text-center">
                     <div className="text-4xl mb-2 font-bold">{currency.code}</div>
@@ -412,7 +470,15 @@ const ClientDashboard = () => {
                           <div className="space-y-1 text-sm">
                             <div>Investment: <span className="font-medium">KES {rental.amount}</span></div>
                             <div>Expected Return: <span className="font-medium text-success">KES {rental.expectedReturn}</span></div>
-                            <div>Status: <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 bg-warning text-warning-foreground">Active</span></div>
+                            <div>Status: 
+                              <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ml-2 ${
+                                rental.status === 'paid' 
+                                  ? 'bg-green-100 text-green-800 border-green-300' 
+                                  : 'bg-warning text-warning-foreground'
+                              }`}>
+                                {rental.status === 'paid' ? 'Paid & Active' : 'Active'}
+                              </span>
+                            </div>
                           </div>
                         </div>
                         <button 
@@ -443,239 +509,6 @@ const ClientDashboard = () => {
           </div>
         );
 
-      case 'withdraw':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold mb-2">Withdraw Funds</h2>
-              <p className="text-muted-foreground">Withdraw your completed rental returns</p>
-            </div>
-
-            <div className="currency-card rounded-lg border bg-card text-card-foreground shadow-sm">
-              <div className="flex flex-col space-y-1.5 p-6">
-                <h3 className="text-2xl font-semibold leading-none tracking-tight">Available Balance</h3>
-              </div>
-              <div className="p-6 pt-0">
-                <div className="text-3xl font-bold text-success mb-4">KES {balance.toLocaleString()}</div>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium">M-Pesa Phone Number</label>
-                    <input 
-                      type="text"
-                      placeholder="254712345678" 
-                      className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Amount to Withdraw</label>
-                    <input 
-                      type="text"
-                      placeholder="Enter amount" 
-                      className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    />
-                  </div>
-                  <button 
-                    className="w-full inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-bold ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-gradient-to-r from-green-500 via-green-600 to-green-400 text-white shadow-lg hover:scale-105 h-12 px-4 py-2 border-2 border-green-600"
-                    onClick={() => {
-                      // Simulate withdrawal process: create a new rental with 24h timer
-                      const withdrawalRental = {
-                        id: Date.now(),
-                        currency: { code: 'KES', name: 'Kenyan Shilling', color: 'bg-green-600' },
-                        amount: balance,
-                        timeLeft: 24 * 60 * 60, // 24 hours
-                        expectedReturn: balance,
-                        isWithdrawal: true
-                      };
-                      setActiveRentals([...activeRentals, withdrawalRental]);
-                      setActiveTab('rentals');
-                      window.alert('Withdrawal initiated! Your funds will be available after 24 hours.');
-                    }}
-                  >
-                    <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 7h10v10"/><path d="m7 17 10-10"/></svg>
-                    Withdraw to M-Pesa
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'history':
-        return (
-          <div className="space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-bold mb-2">Transaction History</h2>
-                <p className="text-muted-foreground">View all your rental and withdrawal activities</p>
-              </div>
-              <div className="flex gap-2">
-                <div className="relative">
-                  <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-                  </svg>
-                  <input 
-                    type="text"
-                    placeholder="Search transactions..." 
-                    className="pl-10 w-full md:w-64 flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                </div>
-                <button className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 w-10">
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <div className="currency-card rounded-lg border bg-card text-card-foreground shadow-sm">
-              <div className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="border-b">
-                      <tr className="text-left">
-                        <th className="p-4 font-medium">Type</th>
-                        <th className="p-4 font-medium">Currency</th>
-                        <th className="p-4 font-medium">Amount</th>
-                        <th className="p-4 font-medium">Status</th>
-                        <th className="p-4 font-medium">Date</th>
-                        <th className="p-4 font-medium">Return</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {transactions.map((tx) => (
-                        <tr key={tx.id} className="border-b last:border-b-0 hover:bg-muted/50">
-                          <td className="p-4">
-                            <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
-                              tx.type === 'Rental' ? 'border-transparent bg-primary text-primary-foreground hover:bg-primary/80' : 'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                            }`}>
-                              {tx.type}
-                            </span>
-                          </td>
-                          <td className="p-4 font-medium">{tx.currency}</td>
-                          <td className="p-4">KES {tx.amount}</td>
-                          <td className="p-4">
-                            <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
-                              tx.status === 'Completed' ? 'bg-success text-success-foreground' :
-                              tx.status === 'Active' ? 'bg-warning text-warning-foreground' : 'bg-muted text-muted-foreground'
-                            }`}>
-                              {tx.status}
-                            </span>
-                          </td>
-                          <td className="p-4 text-muted-foreground">{tx.date}</td>
-                          <td className="p-4 text-success font-medium">
-                            {tx.return ? `KES ${tx.return}` : '-'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'support':
-        return (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold mb-2">Support Center</h2>
-              <p className="text-muted-foreground">Get help with your account and rentals</p>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="currency-card rounded-lg border bg-card text-card-foreground shadow-sm">
-                <div className="flex flex-col space-y-1.5 p-6">
-                  <h3 className="text-2xl font-semibold leading-none tracking-tight">Contact Us</h3>
-                </div>
-                <div className="p-6 pt-0">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium">Name</label>
-                      <input 
-                        type="text"
-                        placeholder="Your full name" 
-                        className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Email</label>
-                      <input 
-                        type="email"
-                        placeholder="your@email.com" 
-                        className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Message</label>
-                      <textarea 
-                        placeholder="How can we help you?" 
-                        rows="4"
-                        className="mt-1 flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      />
-                    </div>
-                    <button className="btn-primary-gradient w-full inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
-                      Send Message
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="currency-card rounded-lg border bg-card text-card-foreground shadow-sm">
-                <div className="flex flex-col space-y-1.5 p-6">
-                  <h3 className="text-2xl font-semibold leading-none tracking-tight">FAQ</h3>
-                </div>
-                <div className="p-6 pt-0">
-                  <div className="space-y-4">
-                    <div className="border rounded-lg">
-                      <button className="w-full text-left p-4 hover:bg-muted/50">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">How does currency rental work?</span>
-                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="m6 9 6 6 6-6"/>
-                          </svg>
-                        </div>
-                      </button>
-                    </div>
-                    <div className="border rounded-lg">
-                      <button className="w-full text-left p-4 hover:bg-muted/50">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">When will I receive my returns?</span>
-                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="m6 9 6 6 6-6"/>
-                          </svg>
-                        </div>
-                      </button>
-                    </div>
-                    <div className="border rounded-lg">
-                      <button className="w-full text-left p-4 hover:bg-muted/50">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">Is my investment secure?</span>
-                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="m6 9 6 6 6-6"/>
-                          </svg>
-                        </div>
-                      </button>
-                    </div>
-                    <div className="border rounded-lg">
-                      <button className="w-full text-left p-4 hover:bg-muted/50">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">How do I withdraw my funds?</span>
-                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="m6 9 6 6 6-6"/>
-                          </svg>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-
-      default:
-        return null;
     }
   };
 

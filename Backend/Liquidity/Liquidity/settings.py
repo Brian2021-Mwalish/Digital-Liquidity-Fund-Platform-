@@ -30,7 +30,7 @@ INSTALLED_APPS = [
 
     #  apps
     'Users', 
-    "payment", 
+    'payment', 
 ]
 
 # -------------------
