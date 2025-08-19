@@ -7,6 +7,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import toast from "react-hot-toast";
 import { Eye, EyeOff } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
 
 const schema = yup.object().shape({
   email: yup.string().email("Invalid email format").required("Email is required"),
@@ -25,6 +26,27 @@ const Login = () => {
     resolver: yupResolver(schema),
   });
 
+  const showAllMessages = (result, type = "success") => {
+    if (typeof result === "string") {
+      type === "success" ? toast.success(result) : toast.error(result);
+      return;
+    }
+
+    if (typeof result === "object") {
+      Object.entries(result).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          value.forEach((msg) =>
+            type === "success" ? toast.success(`${key.toUpperCase()}: ${msg}`) : toast.error(`${key.toUpperCase()}: ${msg}`)
+          );
+        } else {
+          type === "success"
+            ? toast.success(`${key.toUpperCase()}: ${value}`)
+            : toast.error(`${key.toUpperCase()}: ${value}`);
+        }
+      });
+    }
+  };
+
   const onSubmit = async (data) => {
     try {
       const res = await fetch("http://localhost:8000/api/auth/login/", {
@@ -36,17 +58,15 @@ const Login = () => {
       const result = await res.json();
 
       if (!res.ok) {
-        throw new Error(result.message || "Login failed");
+        showAllMessages(result, "error");
+        return;
       }
 
-      toast.success("Login successful!");
+      showAllMessages(result, "success");
 
-      // Save JWT in localStorage ONLY as 'jwt' for global use and always redirect after storing it
       if (result.token || result.access) {
         localStorage.setItem("jwt", result.token || result.access);
-        if (result.name) {
-          localStorage.setItem("client_name", result.name);
-        }
+        if (result.name) localStorage.setItem("client_name", result.name);
         if (result.is_superuser === 1) {
           navigate("/admin-dashboard");
         } else {
@@ -54,16 +74,45 @@ const Login = () => {
         }
         return;
       }
-      // If for some reason token not present, show error
-      throw new Error("Invalid login. No access token returned. Contact support.");
+
+      toast.error("Invalid login. No access token returned. Contact support.");
     } catch (error) {
-      toast.error(error.message);
+      toast.error("SERVER ERROR: " + error.message);
     }
   };
 
-  const handleGoogleLogin = () => {
-    toast.loading("Redirecting to Google...");
-    window.location.href = "http://localhost:8000/api/auth/google/";
+  const handleGoogleLogin = async (credentialResponse) => {
+    try {
+      const res = await fetch("http://localhost:8000/api/auth/google/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential: credentialResponse.credential }),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        showAllMessages(result, "error");
+        return;
+      }
+
+      showAllMessages(result, "success");
+
+      if (result.token || result.access) {
+        localStorage.setItem("jwt", result.token || result.access);
+        if (result.name) localStorage.setItem("client_name", result.name);
+        if (result.is_superuser === 1) {
+          navigate("/admin-dashboard");
+        } else {
+          navigate("/client-dashboard");
+        }
+        return;
+      }
+
+      toast.error("Invalid login. No access token returned. Contact support.");
+    } catch (error) {
+      toast.error("SERVER ERROR: " + error.message);
+    }
   };
 
   return (
@@ -73,29 +122,29 @@ const Login = () => {
         <div className="mb-2">
           <NavigationArrow label="Back to Home" to="/" />
         </div>
+
         {/* Header */}
         <div className="text-center transform transition-all duration-300 hover:scale-105">
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent animate-pulse">Sign In</h2>
-          <p className="mt-2 text-gray-600 transition-colors duration-300 hover:text-gray-800">Access your Liquidity Investments account</p>
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent animate-pulse">
+            Sign In
+          </h2>
+          <p className="mt-2 text-gray-600 transition-colors duration-300 hover:text-gray-800">
+            Access your Liquidity Investments account
+          </p>
         </div>
 
-        <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 transform transition-all duration-500 hover:shadow-2xl hover:-translate-y-1" style={{ minHeight: '350px' }}>
-          {/* Google Login - Now at the top */}
+        <div
+          className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 transform transition-all duration-500 hover:shadow-2xl hover:-translate-y-1"
+          style={{ minHeight: "350px" }}
+        >
+          {/* Google Login */}
           <div className="mb-6">
-            <button
-              onClick={handleGoogleLogin}
-              className="w-full group relative overflow-hidden bg-white border-2 border-gray-200 flex items-center justify-center py-3 rounded-xl transition-all duration-300 hover:border-blue-300 hover:shadow-lg hover:-translate-y-1 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <img
-                src="https://developers.google.com/identity/images/g-logo.png"
-                alt="Google"
-                className="w-5 h-5 mr-3 relative z-10 transition-transform duration-300 group-hover:scale-110"
-              />
-              <span className="font-medium text-gray-700 relative z-10 group-hover:text-blue-700 transition-colors duration-300">
-                Continue with Google
-              </span>
-            </button>
+            <GoogleLogin
+              onSuccess={handleGoogleLogin}
+              onError={() => toast.error("Google login failed")}
+              useOneTap
+              size="large"
+            />
           </div>
 
           {/* Divider */}
@@ -104,14 +153,16 @@ const Login = () => {
               <div className="w-full border-t border-gray-200"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-gray-500 transition-colors duration-300 hover:text-gray-700">or continue with email</span>
+              <span className="px-4 bg-white text-gray-500 transition-colors duration-300 hover:text-gray-700">
+                or continue with email
+              </span>
             </div>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            {/* Email & Password - Horizontal Alignment */}
             <div className="flex gap-4">
+              {/* Email */}
               <div className="group w-1/2">
                 <label className="block mb-2 font-semibold text-gray-700 text-sm">Email Address</label>
                 <input
@@ -124,10 +175,10 @@ const Login = () => {
                   }`}
                   placeholder="Email address"
                 />
-                {errors.email && (
-                  <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>
-                )}
+                {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>}
               </div>
+
+              {/* Password */}
               <div className="group w-1/2">
                 <label className="block mb-2 font-semibold text-gray-700 text-sm">Password</label>
                 <div className="relative">
@@ -149,9 +200,7 @@ const Login = () => {
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
-                {errors.password && (
-                  <p className="text-xs text-red-500 mt-1">{errors.password.message}</p>
-                )}
+                {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password.message}</p>}
               </div>
             </div>
 

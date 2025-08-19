@@ -33,6 +33,11 @@ INSTALLED_APPS = [
     'payment', 
 ]
 
+
+
+# Add your Google Client ID from Google Cloud Console
+GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID_HERE"
+
 # -------------------
 # Middleware
 MIDDLEWARE = [

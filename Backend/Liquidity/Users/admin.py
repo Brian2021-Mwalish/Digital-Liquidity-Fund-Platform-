@@ -1,10 +1,18 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from .models import CustomUser
 
+class CustomUserCreationForm(UserCreationForm):
+    class Meta:
+        model = CustomUser
+        fields = ("email", "full_name")
 
 class CustomUserAdmin(UserAdmin):
     model = CustomUser
+    form = UserChangeForm
+    add_form = CustomUserCreationForm
+
     list_display = ("email", "full_name", "is_staff", "is_superuser", "date_joined")
     list_filter = ("is_staff", "is_superuser", "is_active")
     ordering = ("email",)
@@ -22,6 +30,5 @@ class CustomUserAdmin(UserAdmin):
             "fields": ("email", "full_name", "password1", "password2", "is_staff", "is_superuser")
         }),
     )
-
 
 admin.site.register(CustomUser, CustomUserAdmin)
