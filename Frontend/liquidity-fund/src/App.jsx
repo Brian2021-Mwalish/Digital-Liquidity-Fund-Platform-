@@ -8,12 +8,10 @@ const App = () => {
   const location = useLocation();
 
   return (
-    <div className="flex flex-col min-h-screen font-sans bg-gray-50 text-gray-800">
-      <main className="flex-grow container mx-auto px-4 py-6">
-        <AppRoutes />
-      </main>
+    <>
+      <AppRoutes />
       <Footer />
-    </div>
+    </>
   );
 };
 
