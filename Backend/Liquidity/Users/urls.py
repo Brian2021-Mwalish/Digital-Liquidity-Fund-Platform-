@@ -1,17 +1,18 @@
-# users/urls.py
 from django.urls import path
-from .views import RegisterView, LoginView, GoogleLoginView, ProfileView
+from .views import (
+    RegisterView,
+    LoginView,
+    GoogleLoginView,
+    ProfileView,
+    LogoutView,
+    SessionListView,  # 🔹 Import the session list view
+)
 
 urlpatterns = [
-    # Registration
     path("register/", RegisterView.as_view(), name="register"),
-
-    # Email & password login
     path("login/", LoginView.as_view(), name="login"),
-
-    # Google OAuth login
     path("google/", GoogleLoginView.as_view(), name="google-login"),
-
-    # Authenticated user profile (requires JWT in Authorization header)
+    path("logout/", LogoutView.as_view(), name="logout"),
     path("profile/", ProfileView.as_view(), name="profile"),
+    path("sessions/", SessionListView.as_view(), name="sessions-list"),  # 🔹 Add sessions endpoint
 ]

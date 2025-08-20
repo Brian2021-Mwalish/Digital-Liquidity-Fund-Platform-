@@ -31,7 +31,6 @@ const Login = () => {
       type === "success" ? toast.success(result) : toast.error(result);
       return;
     }
-
     if (typeof result === "object") {
       Object.entries(result).forEach(([key, value]) => {
         if (Array.isArray(value)) {
@@ -44,6 +43,27 @@ const Login = () => {
             : toast.error(`${key.toUpperCase()}: ${value}`);
         }
       });
+    }
+  };
+
+  const handleLoginNavigation = (result) => {
+    const token = result.token || result.access;
+    if (token) {
+      localStorage.setItem("jwt", token); // store JWT
+
+      const user = result.user; // extract user object from response
+      if (user) {
+        localStorage.setItem("client_name", user.full_name || user.username || "");
+
+        // Navigate based on role
+        if (user.is_superuser) {
+          navigate("/admin-dashboard");
+        } else {
+          navigate("/client-dashboard");
+        }
+      }
+    } else {
+      toast.error("Invalid login. No access token returned. Contact support.");
     }
   };
 
@@ -63,19 +83,7 @@ const Login = () => {
       }
 
       showAllMessages(result, "success");
-
-      if (result.token || result.access) {
-        localStorage.setItem("jwt", result.token || result.access);
-        if (result.name) localStorage.setItem("client_name", result.name);
-        if (result.is_superuser === 1) {
-          navigate("/admin-dashboard");
-        } else {
-          navigate("/client-dashboard");
-        }
-        return;
-      }
-
-      toast.error("Invalid login. No access token returned. Contact support.");
+      handleLoginNavigation(result);
     } catch (error) {
       toast.error("SERVER ERROR: " + error.message);
     }
@@ -86,7 +94,7 @@ const Login = () => {
       const res = await fetch("http://localhost:8000/api/auth/google/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ credential: credentialResponse.credential }),
+        body: JSON.stringify({ token: credentialResponse.credential }),
       });
 
       const result = await res.json();
@@ -97,19 +105,7 @@ const Login = () => {
       }
 
       showAllMessages(result, "success");
-
-      if (result.token || result.access) {
-        localStorage.setItem("jwt", result.token || result.access);
-        if (result.name) localStorage.setItem("client_name", result.name);
-        if (result.is_superuser === 1) {
-          navigate("/admin-dashboard");
-        } else {
-          navigate("/client-dashboard");
-        }
-        return;
-      }
-
-      toast.error("Invalid login. No access token returned. Contact support.");
+      handleLoginNavigation(result);
     } catch (error) {
       toast.error("SERVER ERROR: " + error.message);
     }
@@ -118,12 +114,10 @@ const Login = () => {
   return (
     <div className="fixed inset-0 w-screen h-screen bg-gradient-to-br from-indigo-100 via-white to-blue-100 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl space-y-8 animate-fade-in">
-        {/* Navigation Arrow */}
         <div className="mb-2">
           <NavigationArrow label="Back to Home" to="/" />
         </div>
 
-        {/* Header */}
         <div className="text-center transform transition-all duration-300 hover:scale-105">
           <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent animate-pulse">
             Sign In
@@ -137,7 +131,6 @@ const Login = () => {
           className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 transform transition-all duration-500 hover:shadow-2xl hover:-translate-y-1"
           style={{ minHeight: "350px" }}
         >
-          {/* Google Login */}
           <div className="mb-6">
             <GoogleLogin
               onSuccess={handleGoogleLogin}
@@ -147,7 +140,6 @@ const Login = () => {
             />
           </div>
 
-          {/* Divider */}
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-200"></div>
@@ -159,10 +151,8 @@ const Login = () => {
             </div>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="flex gap-4">
-              {/* Email */}
               <div className="group w-1/2">
                 <label className="block mb-2 font-semibold text-gray-700 text-sm">Email Address</label>
                 <input
@@ -178,7 +168,6 @@ const Login = () => {
                 {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>}
               </div>
 
-              {/* Password */}
               <div className="group w-1/2">
                 <label className="block mb-2 font-semibold text-gray-700 text-sm">Password</label>
                 <div className="relative">
@@ -204,7 +193,6 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={isSubmitting}
@@ -218,7 +206,6 @@ const Login = () => {
           </form>
         </div>
 
-        {/* Register Link */}
         <div className="text-center">
           <p className="text-gray-600">
             Don't have an account?{" "}

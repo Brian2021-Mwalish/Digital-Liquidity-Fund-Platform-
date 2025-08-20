@@ -1,25 +1,22 @@
+# users/admin.py
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from django.contrib.auth.forms import UserCreationForm, UserChangeForm
-from .models import CustomUser
+from .models import CustomUser, UserSession
 
-class CustomUserCreationForm(UserCreationForm):
-    class Meta:
-        model = CustomUser
-        fields = ("email", "full_name")
 
+# -----------------------
+# Custom User Admin
+# -----------------------
 class CustomUserAdmin(UserAdmin):
     model = CustomUser
-    form = UserChangeForm
-    add_form = CustomUserCreationForm
-
-    list_display = ("email", "full_name", "is_staff", "is_superuser", "date_joined")
-    list_filter = ("is_staff", "is_superuser", "is_active")
-    ordering = ("email",)
+    list_display = ("id", "email", "full_name", "is_active", "is_staff", "date_joined")
+    list_filter = ("is_active", "is_staff", "is_superuser", "date_joined")
     search_fields = ("email", "full_name")
+    ordering = ("-date_joined",)
 
     fieldsets = (
-        (None, {"fields": ("email", "password", "full_name")}),
+        (None, {"fields": ("email", "password")}),
+        ("Personal Info", {"fields": ("full_name",)}),
         ("Permissions", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
         ("Important dates", {"fields": ("last_login", "date_joined")}),
     )
@@ -27,8 +24,22 @@ class CustomUserAdmin(UserAdmin):
     add_fieldsets = (
         (None, {
             "classes": ("wide",),
-            "fields": ("email", "full_name", "password1", "password2", "is_staff", "is_superuser")
+            "fields": ("email", "full_name", "password1", "password2", "is_active", "is_staff"),
         }),
     )
 
+
+# -----------------------
+# User Session Admin
+# -----------------------
+class UserSessionAdmin(admin.ModelAdmin):
+    model = UserSession
+    list_display = ("id", "user", "session_key", "device", "ip_address", "login_time", "logout_time", "is_active")
+    list_filter = ("is_active", "login_time", "logout_time")
+    search_fields = ("user__email", "session_key", "device", "ip_address")
+    ordering = ("-login_time",)
+
+
+# Register models
 admin.site.register(CustomUser, CustomUserAdmin)
+admin.site.register(UserSession, UserSessionAdmin)

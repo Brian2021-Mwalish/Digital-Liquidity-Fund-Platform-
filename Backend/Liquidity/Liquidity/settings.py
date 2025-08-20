@@ -35,8 +35,9 @@ INSTALLED_APPS = [
 
 
 
-# Add your Google Client ID from Google Cloud Console
-GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID_HERE"
+# Google OAuth
+GOOGLE_CLIENT_ID = "951701162152-f3jop7bv32kalva01820109m1lqtdjmq.apps.googleusercontent.com"
+
 
 # -------------------
 # Middleware

@@ -3,34 +3,29 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, logout
+from django.utils.timezone import now
 from django.conf import settings
 from .models import CustomUser
 
-import jwt
-import requests
 import logging
+import requests
+from rest_framework_simplejwt.tokens import RefreshToken
 
 # -----------------------
 # Logger setup
 # -----------------------
 logger = logging.getLogger(__name__)
 
-
 # -----------------------
 # JWT Utility
 # -----------------------
-def create_jwt(user):
-    """Generate JWT for authenticated user"""
-    try:
-        payload = {"user_id": user.id, "email": user.email}
-        token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
-        logger.info(f"JWT created for user {user.email}")
-        return token
-    except Exception as e:
-        logger.error(f"JWT creation failed: {str(e)}")
-        raise
-
+def get_tokens_for_user(user):
+    refresh = RefreshToken.for_user(user)
+    return {
+        "refresh": str(refresh),
+        "access": str(refresh.access_token),
+    }
 
 # -----------------------
 # Register
@@ -44,48 +39,38 @@ class RegisterView(APIView):
         email = data.get("email")
         password = data.get("password")
 
-        logger.info(f"Register attempt: {email}")
-
         if not full_name or not email or not password:
-            logger.warning("Missing required fields during registration")
-            return Response(
-                {"error": "Full name, email, and password are required."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"error": "Full name, email, and password are required."},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         if CustomUser.objects.filter(email=email).exists():
-            logger.warning(f"Duplicate registration attempt for {email}")
-            return Response(
-                {"error": "A user with this email already exists."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"error": "A user with this email already exists."},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         try:
             user = CustomUser.objects.create_user(
                 email=email, full_name=full_name, password=password
             )
-            token = create_jwt(user)
-            logger.info(f"User registered successfully: {email}")
+            tokens = get_tokens_for_user(user)
 
-            return Response(
-                {
-                    "message": "User registered successfully",
-                    "token": token,
-                    "user": {
-                        "id": user.id,
-                        "full_name": user.full_name,
-                        "email": user.email,
-                    },
-                },
-                status=status.HTTP_201_CREATED,
-            )
+            request.session["user_id"] = user.id
+            request.session["last_activity"] = str(now())
+
+            return Response({
+                "message": "User registered successfully",
+                "access": tokens["access"],
+                "refresh": tokens["refresh"],
+                "user": {
+                    "id": user.id,
+                    "full_name": user.full_name,
+                    "email": user.email,
+                    "is_superuser": user.is_superuser,
+                }
+            }, status=status.HTTP_201_CREATED)
         except Exception as e:
             logger.error(f"Registration failed: {str(e)}")
-            return Response(
-                {"error": f"Registration failed: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
+            return Response({"error": f"Registration failed: {str(e)}"},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # -----------------------
 # Login
@@ -97,46 +82,46 @@ class LoginView(APIView):
         email = request.data.get("email")
         password = request.data.get("password")
 
-        logger.info(f"Login attempt: {email}")
-
         if not email or not password:
-            logger.warning("Missing credentials during login")
-            return Response(
-                {"error": "Email and password are required."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"error": "Email and password are required."},
+                            status=status.HTTP_400_BAD_REQUEST)
 
+        user = authenticate(request, email=email, password=password)
+        if not user:
+            return Response({"error": "Invalid credentials."},
+                            status=status.HTTP_401_UNAUTHORIZED)
+
+        tokens = get_tokens_for_user(user)
+        request.session["user_id"] = user.id
+        request.session["last_activity"] = str(now())
+
+        return Response({
+            "message": "Login successful",
+            "access": tokens["access"],
+            "refresh": tokens["refresh"],
+            "user": {
+                "id": user.id,
+                "full_name": user.full_name,
+                "email": user.email,
+                "is_superuser": user.is_superuser,
+            }
+        }, status=status.HTTP_200_OK)
+
+# -----------------------
+# Logout
+# -----------------------
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
         try:
-            user = authenticate(request, email=email, password=password)
-            if not user:
-                logger.warning(f"Invalid login attempt for {email}")
-                return Response(
-                    {"error": "Invalid credentials."},
-                    status=status.HTTP_401_UNAUTHORIZED,
-                )
-
-            token = create_jwt(user)
-            logger.info(f"Login successful: {email}")
-
-            return Response(
-                {
-                    "message": "Login successful",
-                    "token": token,
-                    "user": {
-                        "id": user.id,
-                        "full_name": user.full_name,
-                        "email": user.email,
-                    },
-                },
-                status=status.HTTP_200_OK,
-            )
+            logout(request)
+            request.session.flush()
+            return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
         except Exception as e:
-            logger.error(f"Login failed: {str(e)}")
-            return Response(
-                {"error": f"Login failed: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
+            logger.error(f"Logout failed: {str(e)}")
+            return Response({"error": f"Logout failed: {str(e)}"},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # -----------------------
 # Google OAuth
@@ -146,72 +131,48 @@ class GoogleLoginView(APIView):
 
     def post(self, request):
         token = request.data.get("token")
-        logger.info("Google login attempt")
-
         if not token:
-            logger.warning("Google login failed: No token provided")
-            return Response(
-                {"error": "Google token is required."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"error": "Google token is required."}, status=400)
 
         try:
-            # Verify Google token
+            # Verify token with Google
             google_url = f"https://oauth2.googleapis.com/tokeninfo?id_token={token}"
-            response = requests.get(google_url)
-            if response.status_code != 200:
-                logger.warning("Invalid Google token received")
-                return Response(
-                    {"error": "Invalid Google token."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+            resp = requests.get(google_url)
+            if resp.status_code != 200:
+                return Response({"error": "Invalid Google token."}, status=400)
 
-            user_data = response.json()
+            user_data = resp.json()
             email = user_data.get("email")
             full_name = user_data.get("name")
-
             if not email:
-                logger.warning("Google token did not return an email")
-                return Response(
-                    {"error": "Google token did not return an email."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+                return Response({"error": "Google token did not return an email."}, status=400)
 
             # Get or create user
             user, created = CustomUser.objects.get_or_create(
                 email=email,
-                defaults={
-                    "full_name": full_name,
-                    "password": CustomUser.objects.make_random_password(),
-                },
+                defaults={"full_name": full_name, "password": CustomUser.objects.make_random_password()},
             )
 
-            if created:
-                logger.info(f"New user created via Google: {email}")
-            else:
-                logger.info(f"Existing user logged in via Google: {email}")
+            tokens = get_tokens_for_user(user)
+            request.session["user_id"] = user.id
+            request.session["last_activity"] = str(now())
 
-            token = create_jwt(user)
-            return Response(
-                {
-                    "message": "Google login successful",
-                    "token": token,
-                    "user": {
-                        "id": user.id,
-                        "full_name": user.full_name,
-                        "email": user.email,
-                    },
-                },
-                status=status.HTTP_200_OK,
-            )
+            return Response({
+                "message": "Google login successful",
+                "access": tokens["access"],
+                "refresh": tokens["refresh"],
+                "user": {
+                    "id": user.id,
+                    "full_name": user.full_name,
+                    "email": user.email,
+                    "is_superuser": user.is_superuser,
+                }
+            }, status=status.HTTP_200_OK)
 
         except Exception as e:
             logger.error(f"Google login failed: {str(e)}")
-            return Response(
-                {"error": f"Google login failed: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
+            return Response({"error": f"Google login failed: {str(e)}"},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # -----------------------
 # Profile (Protected)
@@ -221,14 +182,30 @@ class ProfileView(APIView):
 
     def get(self, request):
         user = request.user
-        logger.info(f"Profile accessed: {user.email}")
-        return Response(
-            {
-                "message": "Profile retrieved successfully",
-                "id": user.id,
-                "full_name": user.full_name,
-                "email": user.email,
-                "date_joined": user.date_joined,
-            },
-            status=status.HTTP_200_OK,
-        )
+        request.session["last_activity"] = str(now())
+        return Response({
+            "message": "Profile retrieved successfully",
+            "id": user.id,
+            "full_name": user.full_name,
+            "email": user.email,
+            "date_joined": user.date_joined,
+            "last_activity": request.session.get("last_activity"),
+        }, status=status.HTTP_200_OK)
+
+# -----------------------
+# Session List (Protected)
+# -----------------------
+class SessionListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user_id = request.session.get("user_id")
+        last_activity = request.session.get("last_activity")
+
+        sessions = [{
+            "id": user_id,
+            "device": "Unknown",
+            "last_active": last_activity,
+        }]
+
+        return Response({"sessions": sessions}, status=status.HTTP_200_OK)
