@@ -4,6 +4,7 @@ import { Search, Bell, ChevronDown, Menu, X, BarChart3, Users, Home, CreditCard,
 const AdminDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('overview');
+  const [profileOpen, setProfileOpen] = useState(false); // ✅ added state
 
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: BarChart3, count: null },
@@ -23,6 +24,12 @@ const AdminDashboard = () => {
     { title: 'Monthly Revenue', value: '$24,680', change: '+18%', positive: true },
     { title: 'Pending KYC', value: '12', change: '-3%', positive: false }
   ];
+
+  // ✅ stubbed logout handler
+  const handleLogout = () => {
+    console.log("Logout clicked");
+    setProfileOpen(false);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -60,18 +67,39 @@ const AdminDashboard = () => {
               </button>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-sm font-semibold text-white">A</span>
+            {/* Profile */}
+            <div className="relative">
+              <div 
+                className="flex items-center space-x-2 cursor-pointer"
+                onClick={() => setProfileOpen(!profileOpen)}
+              >
+                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                  <span className="text-sm font-semibold text-white">A</span>
+                </div>
+                <button className="text-white hover:bg-white/10 p-2 rounded-md hidden sm:flex items-center">
+                  Admin <ChevronDown size={16} className="ml-1" />
+                </button>
               </div>
-              <button className="text-white hover:bg-white/10 p-2 rounded-md hidden sm:flex items-center">
-                Admin <ChevronDown size={16} className="ml-1" />
-              </button>
+
+              {profileOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-2 text-gray-800">
+                  <p className="px-4 py-2 text-sm border-b border-gray-200">
+                    Logged in as <span className="block text-xs text-gray-600">admin@example.com</span>
+                  </p>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </header>
 
+      {/* Sidebar + Main */}
       <div className="flex w-full">
         {/* Sidebar */}
         <aside className={`
