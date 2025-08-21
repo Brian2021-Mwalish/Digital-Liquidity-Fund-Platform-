@@ -27,6 +27,28 @@ CURRENCY_COSTS = {
     "USD": 1200,
 }
 
+
+# ---------------------------
+# Helper: Normalize phone number
+# ---------------------------
+def normalize_phone(phone):
+    """
+    Convert Kenyan phone numbers to international format.
+    - 07XXXXXXXX -> 2547XXXXXXXX
+    - 7XXXXXXXX  -> 2547XXXXXXXX
+    - 2547XXXXXXXX -> unchanged
+    """
+    phone = phone.strip()
+    if phone.startswith("0"):
+        return "254" + phone[1:]
+    elif phone.startswith("7"):
+        return "254" + phone
+    elif phone.startswith("254"):
+        return phone
+    else:
+        raise ValueError("Invalid phone number format")
+
+
 # ---------------------------
 # 1. Get Balance (GET)
 # ---------------------------
@@ -46,7 +68,7 @@ class MakePaymentView(APIView):
     def post(self, request):
         try:
             user = request.user
-            card_currency = request.data.get("currency")  # e.g., USD, GBP
+            card_currency = request.data.get("currency")
 
             if not card_currency or card_currency not in CURRENCY_COSTS:
                 return Response(
@@ -101,12 +123,18 @@ class MpesaPaymentView(APIView):
             if card_currency not in CURRENCY_COSTS:
                 return Response({"error": "Unsupported currency"}, status=400)
 
+            # Normalize phone
+            try:
+                phone = normalize_phone(phone)
+            except ValueError:
+                return Response({"error": "Invalid phone number format"}, status=400)
+
             amount = CURRENCY_COSTS[card_currency]
 
             # Request token
-            token_url = "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
+            token_url = f"{settings.MPESA_BASE_URL}/oauth/v1/generate?grant_type=client_credentials"
             token_headers = {
-                "Authorization": "Basic " + settings.MPESA_BASE64_ENCODED_CREDENTIALS
+                "Authorization": f"Basic {settings.MPESA_BASE64_ENCODED_CREDENTIALS}"
             }
             token_res = requests.get(token_url, headers=token_headers, timeout=10)
             if token_res.status_code != 200:
@@ -117,7 +145,7 @@ class MpesaPaymentView(APIView):
                 return Response({"error": "Invalid Mpesa token response"}, status=500)
 
             # STK Push
-            stk_url = "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
+            stk_url = f"{settings.MPESA_BASE_URL}/mpesa/stkpush/v1/processrequest"
             stk_headers = {"Authorization": f"Bearer {access_token}"}
             payload = {
                 "BusinessShortCode": settings.MPESA_SHORTCODE,

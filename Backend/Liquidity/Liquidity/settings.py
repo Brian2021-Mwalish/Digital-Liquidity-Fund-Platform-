@@ -1,7 +1,8 @@
 import os
 from pathlib import Path
 from decouple import config
-from datetime import timedelta
+from datetime import timedelta, datetime
+import base64
 
 # -------------------
 # Paths
@@ -9,7 +10,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # -------------------
 # Security
-SECRET_KEY = config('SECRET_KEY', default='your-secret-key')
+SECRET_KEY = config('DJANGO_SECRET_KEY', default='your-secret-key')
 DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
 
@@ -22,24 +23,24 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
+
     # Third party
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
 
     # Local apps
-    'Users', 
-    'payment', 
+    'Users',
+    'payment',
 ]
 
 # Google OAuth
-GOOGLE_CLIENT_ID = "951701162152-f3jop7bv32kalva01820109m1lqtdjmq.apps.googleusercontent.com"
+GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID', default='YOUR_GOOGLE_CLIENT_ID')
 
 # -------------------
 # Middleware
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # Must be first for CORS
+    'corsheaders.middleware.CorsMiddleware',  # Must be first
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -56,7 +57,7 @@ ROOT_URLCONF = 'Liquidity.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],  # Optional template folder
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -72,11 +73,11 @@ TEMPLATES = [
 WSGI_APPLICATION = 'Liquidity.wsgi.application'
 
 # -------------------
-# URL of your frontend app
-FRONTEND_URL = "http://localhost:5173"  # or your actual frontend domain
+# Frontend URL (for CORS)
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
 
 # -------------------
-# PostgreSQL Database
+# Database (PostgreSQL)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -100,33 +101,29 @@ AUTH_PASSWORD_VALIDATORS = [
 # -------------------
 # Internationalization
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'Africa/Nairobi'  # ✅ set to Kenyan timezone
+TIME_ZONE = 'Africa/Nairobi'
 USE_I18N = True
 USE_TZ = True
 
 # -------------------
-# Static & Media Files
+# Static & Media
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-# Ensure STATICFILES_DIRS exists to avoid warnings
-STATICFILES_DIRS = []
-if (BASE_DIR / "static").exists():
-    STATICFILES_DIRS.append(BASE_DIR / "static")
+STATICFILES_DIRS = [BASE_DIR / 'static'] if (BASE_DIR / "static").exists() else []
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # -------------------
-# Default primary key field type
+# Default primary key
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # -------------------
-# Custom user model
+# Custom user
 AUTH_USER_MODEL = 'Users.CustomUser'
 
 # -------------------
-# Django REST Framework with JWT
+# Django REST Framework + JWT
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -137,10 +134,10 @@ REST_FRAMEWORK = {
 }
 
 # -------------------
-# Simple JWT Settings
+# Simple JWT settings
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),  # 1 hour
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),     # 7 days
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
@@ -148,10 +145,77 @@ SIMPLE_JWT = {
 }
 
 # -------------------
-# CORS
-CORS_ALLOW_ALL_ORIGINS = True
-# If you want to restrict:
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:5173",
-#     "http://127.0.0.1:5173"
-# ]
+# CORS settings
+CORS_ALLOW_ALL_ORIGINS = True  # Dev only
+CORS_ALLOW_CREDENTIALS = True
+
+# -------------------
+# M-PESA sandbox config
+MPESA_ENV = config("MPESA_ENV", default="sandbox")
+MPESA_BASE_URL = config("MPESA_BASE_URL", default="https://sandbox.safaricom.co.ke")
+MPESA_CONSUMER_KEY = config("MPESA_CONSUMER_KEY")
+MPESA_CONSUMER_SECRET = config("MPESA_CONSUMER_SECRET")
+MPESA_SHORTCODE = config("MPESA_SHORTCODE")
+MPESA_PASSKEY = config("MPESA_PASSKEY")
+MPESA_CALLBACK_URL = config("MPESA_CALLBACK_URL")
+
+# Base64 credentials for OAuth
+MPESA_BASE64_ENCODED_CREDENTIALS = base64.b64encode(
+    f"{MPESA_CONSUMER_KEY}:{MPESA_CONSUMER_SECRET}".encode()
+).decode()
+
+# Timestamp for STK Push (YYYYMMDDHHMMSS)
+MPESA_TIMESTAMP = datetime.now().strftime("%Y%m%d%H%M%S")
+
+# Optional: Initiator credentials
+MPESA_INITIATOR_NAME = config("MPESA_INITIATOR_NAME", default="")
+MPESA_INITIATOR_PASSWORD = config("MPESA_INITIATOR_PASSWORD", default="")
+
+# -------------------
+# Logging (optional)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {'class': 'logging.StreamHandler'},
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG' if DEBUG else 'INFO',
+    },
+}
+
+
+# -------------------
+# 💰 M-PESA API (Sandbox)
+MPESA_ENV = config("MPESA_ENV", default="sandbox")  # "sandbox" or "production"
+MPESA_BASE_URL = config(
+    "MPESA_BASE_URL",
+    default="https://sandbox.safaricom.co.ke"  # Sandbox URL
+)
+MPESA_CONSUMER_KEY = config("MPESA_CONSUMER_KEY", default="")
+MPESA_CONSUMER_SECRET = config("MPESA_CONSUMER_SECRET", default="")
+
+# 🔐 STK Push credentials
+MPESA_SHORTCODE = config("MPESA_SHORTCODE", default="")
+MPESA_PASSKEY = config("MPESA_PASSKEY", default="")
+MPESA_CALLBACK_URL = config("MPESA_CALLBACK_URL", default="")
+
+# Optional B2C / reversals
+MPESA_INITIATOR_NAME = config("MPESA_INITIATOR_NAME", default="")
+MPESA_INITIATOR_PASSWORD = config("MPESA_INITIATOR_PASSWORD", default="")
+
+# Helper for Authorization header (Base64 encoded)
+import base64
+MPESA_BASE64_ENCODED_CREDENTIALS = base64.b64encode(
+    f"{MPESA_CONSUMER_KEY}:{MPESA_CONSUMER_SECRET}".encode()
+).decode()
+
+# Timestamp for STK Push (use your own logic or just generate when sending request)
+import datetime
+MPESA_TIMESTAMP = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+
+# Password for STK Push
+MPESA_PASSWORD = base64.b64encode(
+    f"{MPESA_SHORTCODE}{MPESA_PASSKEY}{MPESA_TIMESTAMP}".encode()
+).decode()

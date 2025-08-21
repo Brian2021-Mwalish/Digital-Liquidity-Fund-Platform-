@@ -9,6 +9,8 @@ from .views import (
     MpesaCallbackView,
 )
 
+app_name = "payments"
+
 urlpatterns = [
     # ---------------------------
     # User wallet endpoints

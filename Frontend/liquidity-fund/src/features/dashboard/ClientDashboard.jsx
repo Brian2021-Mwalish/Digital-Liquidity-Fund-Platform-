@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const ClientDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -26,7 +29,7 @@ const ClientDashboard = () => {
   ];
 
   const apiCall = async (endpoint, options = {}) => {
-    const url = `${window.location.origin}/api/payments${endpoint}`;
+    const url = `${API_BASE_URL}/api/payments${endpoint}`;
     const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -184,7 +187,7 @@ const ClientDashboard = () => {
     { id: 'wallet', label: 'Wallet' },
     { id: 'rent', label: 'Rent Currency' },
     { id: 'rentals', label: 'My Rentals' },
-    { id: 'history', label: 'Payment History' },
+     { id: 'history', label: 'Payment History', link: '/home' },
     { id: 'support', label: 'Support' }
   ];
 
