@@ -28,16 +28,13 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
 
-    #  apps
+    # Local apps
     'Users', 
     'payment', 
 ]
 
-
-
 # Google OAuth
 GOOGLE_CLIENT_ID = "951701162152-f3jop7bv32kalva01820109m1lqtdjmq.apps.googleusercontent.com"
-
 
 # -------------------
 # Middleware
@@ -79,7 +76,7 @@ WSGI_APPLICATION = 'Liquidity.wsgi.application'
 FRONTEND_URL = "http://localhost:5173"  # or your actual frontend domain
 
 # -------------------
-# 💾 PostgreSQL Database
+# PostgreSQL Database
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -103,7 +100,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # -------------------
 # Internationalization
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Africa/Nairobi'  # ✅ set to Kenyan timezone
 USE_I18N = True
 USE_TZ = True
 
@@ -111,9 +108,11 @@ USE_TZ = True
 # Static & Media Files
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',  # Create this folder to avoid W004 warning
-]
+
+# Ensure STATICFILES_DIRS exists to avoid warnings
+STATICFILES_DIRS = []
+if (BASE_DIR / "static").exists():
+    STATICFILES_DIRS.append(BASE_DIR / "static")
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'

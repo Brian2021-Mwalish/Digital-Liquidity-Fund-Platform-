@@ -1,87 +1,214 @@
-# payment/views.py
+# payments/views.py
+import requests
+import json
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.conf import settings
+from django.http import JsonResponse
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
-from django.db import transaction as dbtx
-from django.shortcuts import get_object_or_404
+from django.contrib.auth import get_user_model
+from django.db.models import Sum
 
-from .models import MpesaPayment, CurrencyProduct
-from .serializers import StartStkPushSerializer
-from .mpesa import MpesaClient
+from .models import Payment
+from .serializers import PaymentSerializer
 
+User = get_user_model()
 
-class StartStkPushView(APIView):
-    """
-    Initiates an STK Push request.
-    User only sends phone_number + currency_code.
-    Amount is fixed by backend.
-    """
+# --- Currency Deduction Rules (amounts in KES) ---
+CURRENCY_COSTS = {
+    "CAD": 100,
+    "AUD": 250,
+    "GBP": 500,
+    "JPY": 750,
+    "EUR": 1000,
+    "USD": 1200,
+}
+
+# ---------------------------
+# 1. Get Balance (GET)
+# ---------------------------
+class GetBalanceView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    @dbtx.atomic
-    def post(self, request):
-        serializer = StartStkPushSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        phone = serializer.validated_data["phone_number"]
-        code = serializer.validated_data["currency_code"]
-
-        # lookup fixed amount
-        product = get_object_or_404(CurrencyProduct, code=code, active=True)
-        amount = int(product.price_kes)
-
-        # create payment record
-        payment = MpesaPayment.objects.create(
-            user=request.user,
-            phone_number=phone,
-            currency=product,
-            amount=amount,
+    def get(self, request):
+        return Response(
+            {"balance": request.user.balance},
+            status=status.HTTP_200_OK,
         )
 
-        # call Safaricom
-        client = MpesaClient()
-        response = client.stk_push(phone_e164=phone, amount=amount, account_ref=code)
 
-        # save Safaricom response
-        payment.merchant_request_id = response.get("MerchantRequestID", "")
-        payment.checkout_request_id = response.get("CheckoutRequestID", "")
-        payment.raw_callback = response
-        payment.save()
+# ---------------------------
+# 2. Wallet Payment (POST)
+# ---------------------------
+class MakePaymentView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
-        return Response({
-            "message": f"STK push of {amount} KES sent for {code}. Check your phone.",
-            "checkout_request_id": payment.checkout_request_id,
-            "amount": amount,
-            "currency": code
-        }, status=status.HTTP_201_CREATED)
+    def post(self, request):
+        user = request.user
+        card_currency = request.data.get("currency")  # e.g., USD, GBP
+
+        if not card_currency or card_currency not in CURRENCY_COSTS:
+            return Response(
+                {"error": "Unsupported or missing currency"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        deduction = CURRENCY_COSTS[card_currency]
+
+        if user.balance < deduction:
+            return Response(
+                {"error": "Insufficient balance"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.balance -= deduction
+        user.save(update_fields=["balance"])
+
+        payment = Payment.objects.create(
+            user=user,
+            currency="KES",
+            amount_deducted=deduction,
+            status="completed",
+        )
+
+        return Response(
+            {
+                "message": f"Payment successful (Card: {card_currency}, Deducted: {deduction} KES)",
+                "payment": PaymentSerializer(payment).data,
+                "new_balance": user.balance,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
+# ---------------------------
+# 3. Initiate Mpesa STK Push
+# ---------------------------
+class MpesaPaymentView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        phone = request.data.get("phone")
+        card_currency = request.data.get("currency")
+
+        if not phone or not card_currency:
+            return Response({"error": "Phone and currency required"}, status=400)
+
+        if card_currency not in CURRENCY_COSTS:
+            return Response({"error": "Unsupported currency"}, status=400)
+
+        amount = CURRENCY_COSTS[card_currency]
+
+        # Request token
+        token_url = "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
+        token_headers = {
+            "Authorization": "Basic " + settings.MPESA_BASE64_ENCODED_CREDENTIALS
+        }
+        token_res = requests.get(token_url, headers=token_headers)
+        access_token = token_res.json().get("access_token")
+
+        # STK Push
+        stk_url = "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
+        stk_headers = {"Authorization": f"Bearer {access_token}"}
+        payload = {
+            "BusinessShortCode": settings.MPESA_SHORTCODE,
+            "Password": settings.MPESA_PASSWORD,
+            "Timestamp": settings.MPESA_TIMESTAMP,
+            "TransactionType": "CustomerPayBillOnline",
+            "Amount": amount,
+            "PartyA": phone,
+            "PartyB": settings.MPESA_SHORTCODE,
+            "PhoneNumber": phone,
+            "CallBackURL": settings.MPESA_CALLBACK_URL,
+            "AccountReference": card_currency,
+            "TransactionDesc": f"Wallet Topup via {card_currency} card",
+        }
+
+        res = requests.post(stk_url, json=payload, headers=stk_headers)
+        return Response(res.json(), status=res.status_code)
+
+
+# ---------------------------
+# 4. Mpesa Callback
+# ---------------------------
+@method_decorator(csrf_exempt, name="dispatch")
 class MpesaCallbackView(APIView):
-    """
-    Handles callback from Safaricom.
-    """
     permission_classes = [permissions.AllowAny]
 
-    @dbtx.atomic
     def post(self, request):
         data = request.data
-        stk = data.get("Body", {}).get("stkCallback", {})
-        checkout_id = stk.get("CheckoutRequestID")
-        result_code = str(stk.get("ResultCode"))
-        result_desc = stk.get("ResultDesc", "")
+        print("📥 Mpesa Callback:", json.dumps(data, indent=2))
 
-        payment = get_object_or_404(MpesaPayment, checkout_request_id=checkout_id)
-        payment.result_code = result_code
-        payment.result_desc = result_desc
-        payment.raw_callback = data
+        result_code = data.get("Body", {}).get("stkCallback", {}).get("ResultCode")
+        metadata = data.get("Body", {}).get("stkCallback", {}).get("CallbackMetadata", {})
 
-        if result_code == "0":
-            items = stk.get("CallbackMetadata", {}).get("Item", [])
-            receipt = next((i["Value"] for i in items if i.get("Name") == "MpesaReceiptNumber"), "")
-            payment.receipt_number = receipt
-            payment.status = "success"
+        if result_code == 0:
+            amount = None
+            phone = None
+            for item in metadata.get("Item", []):
+                if item["Name"] == "Amount":
+                    amount = item["Value"]
+                if item["Name"] == "PhoneNumber":
+                    phone = item["Value"]
+
+            if amount and phone:
+                try:
+                    user = User.objects.get(phone_number=phone)
+                    user.balance += amount
+                    user.save(update_fields=["balance"])
+
+                    Payment.objects.create(
+                        user=user,
+                        currency="KES",
+                        amount_deducted=amount,
+                        status="completed",
+                    )
+                except User.DoesNotExist:
+                    print("⚠️ Mpesa Callback: User not found for phone", phone)
+
+        return JsonResponse({"ResultCode": 0, "ResultDesc": "Received"})
+
+
+# ---------------------------
+# 5. Payment History (GET)
+# ---------------------------
+class PaymentHistoryView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        payments = Payment.objects.filter(user=request.user).order_by("-created_at")
+        serializer = PaymentSerializer(payments, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# ---------------------------
+# 6. Admin Payments Overview (GET all)
+# ---------------------------
+class AdminPaymentsOverviewView(APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request):
+        # Optional filtering by user_id
+        user_id = request.query_params.get("user_id")
+        if user_id:
+            payments = Payment.objects.filter(user_id=user_id).order_by("-created_at")
         else:
-            payment.status = "failed"
+            payments = Payment.objects.all().order_by("-created_at")
 
-        payment.save()
-        return Response({"ResultCode": 0, "ResultDesc": "Callback received successfully"})
+        serializer = PaymentSerializer(payments, many=True)
+
+        totals = {
+            "KES": payments.aggregate(total=Sum("amount_deducted"))["total"] or 0
+        }
+
+        return Response(
+            {
+                "payments": serializer.data,
+                "totals_by_currency": totals,
+                "grand_total": totals["KES"],
+            },
+            status=status.HTTP_200_OK,
+        )

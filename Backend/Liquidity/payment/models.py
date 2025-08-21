@@ -1,52 +1,34 @@
 # payments/models.py
-from django.conf import settings
 from django.db import models
+from django.utils import timezone
+from Users.models import CustomUser
 
-User = settings.AUTH_USER_MODEL
 
-
-class CurrencyProduct(models.Model):
-    """
-    Fixed currencies/products with system-defined prices.
-    Example: CAD = 100 KES, AUD = 250 KES, etc.
-    """
-    code = models.CharField(max_length=10, unique=True)   # e.g. CAD, USD, EUR
-    name = models.CharField(max_length=100)
-    price_kes = models.PositiveIntegerField()             # fixed amount the user must pay
-    active = models.BooleanField(default=True)
+# -----------------------
+# Wallet Model
+# -----------------------
+class Wallet(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name="wallet")
+    balance = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    last_updated = models.DateTimeField(auto_now=True)  # ✅ tracks when balance changes
 
     def __str__(self):
-        return f"{self.code} - {self.name} ({self.price_kes} KES)"
+        return f"{self.user.email} - Balance: {self.balance} KES"
 
 
-class MpesaPayment(models.Model):
-    """
-    Stores lifecycle of an STK Push payment.
-    """
-    STATUS_CHOICES = [
-        ("initiated", "Initiated"),
-        ("success", "Success"),
-        ("failed", "Failed"),
+# -----------------------
+# Payment Model
+# -----------------------
+class Payment(models.Model):
+    CURRENCY_CHOICES = [
+        ("KES", "Kenyan Shilling"),  
     ]
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="mpesa_payments")
-    phone_number = models.CharField(max_length=20)   # E.164 format e.g. 2547XXXXXXXX
-    currency = models.ForeignKey(CurrencyProduct, on_delete=models.PROTECT)
-    amount = models.PositiveIntegerField()           # auto-filled from CurrencyProduct.price_kes
-
-    merchant_request_id = models.CharField(max_length=64, blank=True)
-    checkout_request_id = models.CharField(max_length=64, blank=True)
-
-    result_code = models.CharField(max_length=10, blank=True)
-    result_desc = models.TextField(blank=True)
-    receipt_number = models.CharField(max_length=64, blank=True)
-
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="initiated")
-
-    raw_callback = models.JSONField(default=dict, blank=True)  # full Safaricom callback
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="payments")
+    currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default="KES")
+    amount_deducted = models.DecimalField(max_digits=12, decimal_places=2)  # always in KES
+    created_at = models.DateTimeField(default=timezone.now)
+    status = models.CharField(max_length=20, default="completed")  # completed, failed, pending
 
     def __str__(self):
-        return f"{self.user} - {self.currency.code} {self.amount} KES ({self.status})"
+        return f"{self.user.email} - {self.amount_deducted} {self.currency}"
