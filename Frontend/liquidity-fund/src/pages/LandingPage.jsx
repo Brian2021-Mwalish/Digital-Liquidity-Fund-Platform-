@@ -162,8 +162,8 @@ const LandingPage = () => {
                     { title: "High liquidity", desc: "Withdraw in 24 hours" },
                     { title: "Capital safety", desc: "Secure instruments only" },
                     { title: "50% referral rewards", desc: "Earn when friends invest" },
-                    { title: "Portfolio visibility", desc: "Real-time tracking" },
-                    { title: "M-Pesa integration", desc: "Seamless transactions" },
+                    
+                
                   ].map((benefit, index) => (
                     <div key={index} className="flex items-start space-x-2 p-2 rounded-lg hover:bg-emerald-50 transition-colors duration-300">
                       <div className="w-4 h-4 bg-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-1">
@@ -182,14 +182,14 @@ const LandingPage = () => {
             <div className="space-y-8">
               <div>
                 <h2 className="text-3xl sm:text-4xl font-bold mb-8 text-gray-800">
-                  <span className="bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">Admin</span> Benefits
+                  <span className="bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">Investor</span> Benefits
                 </h2>
                 <div className="space-y-6">
                   {[ 
-                    { title: "Management fees", desc: "Earn performance-based income" },
-                    { title: "Automated compliance", desc: "CBK & CMA reporting" },
-                    { title: "Scalable onboarding", desc: "Streamlined investor management" },
-                    { title: "Real-time analytics", desc: "Investment & behavior insights" },
+                    { title: "Portfolio visibility", desc: "Real-time tracking" },
+                    { title: "M-Pesa integration", desc: "Seamless transactions" },
+                    
+                    
                   ].map((benefit, index) => (
                     <div key={index} className="flex items-start space-x-2 p-2 rounded-lg hover:bg-purple-50 transition-colors duration-300">
                       <div className="w-4 h-4 bg-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-1">
