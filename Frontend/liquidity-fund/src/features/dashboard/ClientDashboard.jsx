@@ -187,7 +187,7 @@ const ClientDashboard = () => {
     { id: 'wallet', label: 'Wallet' },
     { id: 'rent', label: 'Rent Currency' },
     { id: 'rentals', label: 'My Rentals' },
-     { id: 'history', label: 'Payment History', link: '/home' },
+    { id: 'history', label: 'Payment History', link: '/home' },
     { id: 'support', label: 'Support' }
   ];
 
@@ -202,6 +202,17 @@ const ClientDashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <StatCard title="Current Balance" value={`KES ${balance.toLocaleString()}`} bgColor="bg-green-50 border-green-200" />
               <StatCard title="Doubled Money" value={`KES ${doubledMoney.toLocaleString()}`} subtitle="Money doubled from rentals" bgColor="bg-blue-50 border-blue-200" />
+            </div>
+            <div className="mt-6">
+              <Link 
+                to="/withdraw" 
+                className="inline-flex items-center px-6 py-3 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-all"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                </svg>
+                Withdraw Funds
+              </Link>
             </div>
           </div>
         );
@@ -377,7 +388,7 @@ const ClientDashboard = () => {
                   </button>
                   <button onClick={() => window.location.href = '/login'} className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded-lg text-red-600 flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1"/>
                     </svg>
                     Logout
                   </button>
@@ -393,12 +404,25 @@ const ClientDashboard = () => {
         <aside className="w-64 bg-white border-r border-gray-200 shadow-sm">
           <nav className="p-4 space-y-2">
             {navItems.map((item) => (
-              <button key={item.id} onClick={() => setActiveTab(item.id)}
-                      className={`w-full text-left px-4 py-3 rounded-xl transition-all font-medium ${
-                        activeTab === item.id ? 'bg-indigo-600 text-white shadow-lg' : 'hover:bg-gray-100 text-gray-700'
-                      }`}>
-                {item.label}
-              </button>
+              item.link ? (
+                <Link 
+                  key={item.id} 
+                  to={item.link}
+                  className="w-full text-left px-4 py-3 rounded-xl transition-all font-medium hover:bg-gray-100 text-gray-700 block"
+                >
+                  {item.label}
+                </Link>
+              ) : (
+                <button 
+                  key={item.id} 
+                  onClick={() => setActiveTab(item.id)}
+                  className={`w-full text-left px-4 py-3 rounded-xl transition-all font-medium ${
+                    activeTab === item.id ? 'bg-indigo-600 text-white shadow-lg' : 'hover:bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              )
             ))}
           </nav>
         </aside>
@@ -430,7 +454,7 @@ const ClientDashboard = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
                 <input 
                   type="tel" 
-                  placeholder="0712345678" 
+                  placeholder="07........" 
                   value={phoneNumber}
                   onChange={handlePhoneChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" 

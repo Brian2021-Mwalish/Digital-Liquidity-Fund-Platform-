@@ -21,7 +21,7 @@ const AdminDashboard = () => {
     { title: 'Pending KYC', value: '12', change: '-3%', positive: false }
   ]);
 
-  const API_BASE_URL = 'http://localhost:8000/api/auth';
+  const API_BASE_URL = 'http://127.0.0.1:8000/api/auth';
 
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: BarChart3, count: null },
@@ -57,39 +57,79 @@ const AdminDashboard = () => {
 
   const fetchUsers = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      const response = await fetch(`${API_BASE_URL}/sessions/`, {
-        headers: { 'Authorization': `Bearer ${token}` },
+      const token = localStorage.getItem("access");
+      
+      if (!token) {
+        console.log('No access token found');
+        setUsers([]);
+        return;
+      }
+
+      const res = await fetch("http://127.0.0.1:8000/api/auth/profile/", {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       });
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data.results || data);
+
+      if (res.ok) {
+        const profileData = await res.json();
+        
+        // For now, since there's no users endpoint in your backend,
+        // we'll create mock data based on the authenticated admin
+        const mockUsers = [
+          {
+            id: profileData.id,
+            username: profileData.full_name?.split(' ')[0]?.toLowerCase() || 'admin',
+            email: profileData.email,
+            is_active: true,
+            date_joined: profileData.date_joined,
+            first_name: profileData.full_name?.split(' ')[0] || 'Admin',
+            last_name: profileData.full_name?.split(' ')[1] || 'User'
+          },
+          { id: 2, username: 'john_doe', email: 'john@example.com', is_active: true, date_joined: '2024-01-15', first_name: 'John', last_name: 'Doe' },
+          { id: 3, username: 'jane_smith', email: 'jane@example.com', is_active: false, date_joined: '2024-02-20', first_name: 'Jane', last_name: 'Smith' }
+        ];
+
+        setUsers(mockUsers);
         setStats(prev => prev.map(stat => 
-          stat.title === 'Total Users' ? { ...stat, value: (data.results || data).length.toString() } : stat
+          stat.title === 'Total Users' ? { ...stat, value: mockUsers.length.toString() } : stat
         ));
+
+        // Update admin data
+        setAdminData({
+          username: profileData.full_name || 'Admin',
+          email: profileData.email,
+          is_superuser: true
+        });
+
+      } else if (res.status === 401) {
+        console.error('Authentication failed: Token expired or invalid');
+        setUsers([]);
+      } else {
+        console.error('Failed to fetch profile:', res.status, res.statusText);
+        setUsers([]);
       }
     } catch (error) {
-      console.error('Failed to fetch users:', error);
-      // Mock data for demo
-      const mockUsers = [
-        { id: 1, username: 'john_doe', email: 'john@example.com', is_active: true, date_joined: '2024-01-15', first_name: 'John', last_name: 'Doe' },
-        { id: 2, username: 'jane_smith', email: 'jane@example.com', is_active: false, date_joined: '2024-02-20', first_name: 'Jane', last_name: 'Smith' }
-      ];
-      setUsers(mockUsers);
+      console.error('Network error while fetching users:', error);
+      setUsers([]);
     }
   };
 
   const handleLogout = async () => {
     try {
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem("access");
       await fetch(`${API_BASE_URL}/logout/`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
       });
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      localStorage.removeItem('access_token');
+      localStorage.removeItem("access");
       setProfileOpen(false);
       window.location.href = '/login';
     }
@@ -98,18 +138,28 @@ const AdminDashboard = () => {
   const handleBlockUser = async (userId, isBlocked) => {
     if (!confirm(`Are you sure you want to ${isBlocked ? 'unblock' : 'block'} this user?`)) return;
     try {
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem("access");
+
       const response = await fetch(`${API_BASE_URL}/users/${userId}/`, {
         method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: { 
+          'Authorization': `Bearer ${token}`, 
+          'Content-Type': 'application/json' 
+        },
         body: JSON.stringify({ is_active: isBlocked }),
       });
+      
       if (response.ok) {
         await fetchUsers();
         alert(`User ${isBlocked ? 'unblocked' : 'blocked'} successfully`);
+      } else if (response.status === 401) {
+        alert('Authentication expired. Please log in again.');
+      } else {
+        alert('Failed to update user status');
       }
     } catch (error) {
       console.error('Block user error:', error);
+      alert('An error occurred while updating user status');
     }
   };
 

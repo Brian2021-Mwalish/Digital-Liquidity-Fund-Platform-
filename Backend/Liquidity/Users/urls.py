@@ -1,18 +1,16 @@
 from django.urls import path
 from .views import (
-    RegisterView,
-    LoginView,
-    GoogleLoginView,
-    ProfileView,
-    LogoutView,
-    SessionListView,  # 🔹 Import the session list view
+    RegisterView, LoginView, LogoutView, GoogleLoginView,
+    ProfileView, SessionListView, ForgotPasswordView, ResetPasswordView
 )
 
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
     path("login/", LoginView.as_view(), name="login"),
-    path("google/", GoogleLoginView.as_view(), name="google-login"),
     path("logout/", LogoutView.as_view(), name="logout"),
+    path("google-login/", GoogleLoginView.as_view(), name="google-login"),
     path("profile/", ProfileView.as_view(), name="profile"),
-    path("sessions/", SessionListView.as_view(), name="sessions-list"),  # 🔹 Add sessions endpoint
+    path("sessions/", SessionListView.as_view(), name="sessions"),
+    path("forgot-password/", ForgotPasswordView.as_view(), name="forgot-password"),
+    path("reset-password/<uidb64>/<token>/", ResetPasswordView.as_view(), name="reset-password"),
 ]

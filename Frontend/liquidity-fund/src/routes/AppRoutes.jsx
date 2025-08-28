@@ -12,6 +12,8 @@ import NotFound from "../pages/NotFound";
 import Login from "../features/auth/Login";
 import Register from "../features/auth/Register";
 import KYCForm from "../features/auth/KYCForm";
+import ForgotPassword from "../features/auth/ForgotPassword"; 
+import ResetPassword from "../features/auth/ResetPassword"; // ✅ Added
 
 // Dashboards
 import ClientDashboard from "../features/dashboard/ClientDashboard";
@@ -35,7 +37,7 @@ const PageWrapper = ({ children }) => {
       exit="exit"
       transition={{
         duration: 0.5,
-        ease: [0.4, 0, 0.2, 1], // smooth ease
+        ease: [0.4, 0, 0.2, 1],
       }}
       style={{
         minHeight: "100vh",
@@ -60,6 +62,8 @@ const AppRoutes = () => {
         <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
         <Route path="/register" element={<PageWrapper><Register /></PageWrapper>} />
         <Route path="/kyc" element={<PageWrapper><KYCForm /></PageWrapper>} />
+        <Route path="/forgot-password" element={<PageWrapper><ForgotPassword /></PageWrapper>} /> 
+        <Route path="/reset-password/:uid/:token" element={<PageWrapper><ResetPassword /></PageWrapper>} /> {/* ✅ Added */}
 
         {/* Dashboard Routes */}
         <Route
