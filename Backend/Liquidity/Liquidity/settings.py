@@ -150,16 +150,32 @@ CORS_ALLOW_ALL_ORIGINS = True  # Dev only
 CORS_ALLOW_CREDENTIALS = True
 
 # -------------------
+# 📧 Gmail SMTP (for password reset & notifications)
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
+EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="mwalish2021@gmail.com")
+EMAIL_HOST_PASSWORD = config("EMAIL_PASSWORD", default="")
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER)
+
+# -------------------
 # M-PESA sandbox config
 MPESA_ENV = config("MPESA_ENV", default="sandbox")
 MPESA_BASE_URL = config("MPESA_BASE_URL", default="https://sandbox.safaricom.co.ke")
-MPESA_CONSUMER_KEY = config("MPESA_CONSUMER_KEY")
-MPESA_CONSUMER_SECRET = config("MPESA_CONSUMER_SECRET")
-MPESA_SHORTCODE = config("MPESA_SHORTCODE")
-MPESA_PASSKEY = config("MPESA_PASSKEY")
-MPESA_CALLBACK_URL = config("MPESA_CALLBACK_URL")
+MPESA_CONSUMER_KEY = config("MPESA_CONSUMER_KEY", default="")
+MPESA_CONSUMER_SECRET = config("MPESA_CONSUMER_SECRET", default="")
 
-# Base64 credentials for OAuth
+# 🔐 STK Push credentials
+MPESA_SHORTCODE = config("MPESA_SHORTCODE", default="")
+MPESA_PASSKEY = config("MPESA_PASSKEY", default="")
+MPESA_CALLBACK_URL = config("MPESA_CALLBACK_URL", default="")
+
+# Optional B2C / reversals
+MPESA_INITIATOR_NAME = config("MPESA_INITIATOR_NAME", default="")
+MPESA_INITIATOR_PASSWORD = config("MPESA_INITIATOR_PASSWORD", default="")
+
+# Helper for Authorization header (Base64 encoded)
 MPESA_BASE64_ENCODED_CREDENTIALS = base64.b64encode(
     f"{MPESA_CONSUMER_KEY}:{MPESA_CONSUMER_SECRET}".encode()
 ).decode()
@@ -167,9 +183,10 @@ MPESA_BASE64_ENCODED_CREDENTIALS = base64.b64encode(
 # Timestamp for STK Push (YYYYMMDDHHMMSS)
 MPESA_TIMESTAMP = datetime.now().strftime("%Y%m%d%H%M%S")
 
-# Optional: Initiator credentials
-MPESA_INITIATOR_NAME = config("MPESA_INITIATOR_NAME", default="")
-MPESA_INITIATOR_PASSWORD = config("MPESA_INITIATOR_PASSWORD", default="")
+# Password for STK Push
+MPESA_PASSWORD = base64.b64encode(
+    f"{MPESA_SHORTCODE}{MPESA_PASSKEY}{MPESA_TIMESTAMP}".encode()
+).decode()
 
 # -------------------
 # Logging (optional)
@@ -184,38 +201,3 @@ LOGGING = {
         'level': 'DEBUG' if DEBUG else 'INFO',
     },
 }
-
-
-# -------------------
-# 💰 M-PESA API (Sandbox)
-MPESA_ENV = config("MPESA_ENV", default="sandbox")  # "sandbox" or "production"
-MPESA_BASE_URL = config(
-    "MPESA_BASE_URL",
-    default="https://sandbox.safaricom.co.ke"  # Sandbox URL
-)
-MPESA_CONSUMER_KEY = config("MPESA_CONSUMER_KEY", default="")
-MPESA_CONSUMER_SECRET = config("MPESA_CONSUMER_SECRET", default="")
-
-# 🔐 STK Push credentials
-MPESA_SHORTCODE = config("MPESA_SHORTCODE", default="")
-MPESA_PASSKEY = config("MPESA_PASSKEY", default="")
-MPESA_CALLBACK_URL = config("MPESA_CALLBACK_URL", default="")
-
-# Optional B2C / reversals
-MPESA_INITIATOR_NAME = config("MPESA_INITIATOR_NAME", default="")
-MPESA_INITIATOR_PASSWORD = config("MPESA_INITIATOR_PASSWORD", default="")
-
-# Helper for Authorization header (Base64 encoded)
-import base64
-MPESA_BASE64_ENCODED_CREDENTIALS = base64.b64encode(
-    f"{MPESA_CONSUMER_KEY}:{MPESA_CONSUMER_SECRET}".encode()
-).decode()
-
-# Timestamp for STK Push (use your own logic or just generate when sending request)
-import datetime
-MPESA_TIMESTAMP = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-
-# Password for STK Push
-MPESA_PASSWORD = base64.b64encode(
-    f"{MPESA_SHORTCODE}{MPESA_PASSKEY}{MPESA_TIMESTAMP}".encode()
-).decode()

@@ -213,7 +213,7 @@ const Login = () => {
                 </div>
                 {errors.password && <p className="text-xs text-red-500 mt-1 animate-pulse">{errors.password.message}</p>}
                 
-                {/* ✅ Forgot Password Link */}
+                {/* Forgot Password Link */}
                 <div className="text-right mt-2">
                   <Link
                     to="/forgot-password"
