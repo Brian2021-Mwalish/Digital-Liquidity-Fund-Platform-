@@ -4,12 +4,15 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    # Auth routes
+    # 🔹 Auth routes (/api/auth/...)
     path('api/auth/', include('Users.urls')),
 
-    # Payments routes
+    # 🔹 User management routes (/api/users/...) for AdminDashboard
+    path('api/', include('Users.urls')),  # ensures /api/users/ exists
+
+    # 🔹 Payments routes
     path('api/payments/', include(('payment.urls', 'payment'), namespace='payments')),
 
-    # Withdrawals routes
-    path('api/', include('withdrawal.urls')),  # removed namespace for simplicity
+    # 🔹 Withdrawals routes
+    path('api/', include('withdrawal.urls')),  # no namespace
 ]

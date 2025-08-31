@@ -291,8 +291,10 @@ class UserListView(APIView):
     permission_classes = [IsAdminUser]
 
     def get(self, request):
-        users = CustomUser.objects.all().values("id", "full_name", "email", "is_active", "is_superuser")
-        return Response({"users": list(users)}, status=status.HTTP_200_OK)
+        from .serializers import UserSerializer
+        users = CustomUser.objects.all()
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class BlockUserView(APIView):

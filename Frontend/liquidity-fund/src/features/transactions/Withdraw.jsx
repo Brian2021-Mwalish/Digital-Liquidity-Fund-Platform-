@@ -127,7 +127,7 @@ const Withdrawal = () => {
   const quickAmounts = [300, 500, 1000, 2000, 5000];
 
   return (
-    <div className="fixed inset-0 w-screen h-screen bg-gradient-to-br from-indigo-100 via-white to-blue-100 flex items-center justify-center p-2 sm:p-4 lg:p-6 overflow-hidden">
+    <div className="min-h-screen w-full bg-gradient-to-br from-indigo-100 via-white to-blue-100 flex items-center justify-center p-2 sm:p-4 lg:p-6 py-8 sm:py-12 lg:py-16">
       
        {/* Dashboard back button top left */}
       <div className="absolute left-6 top-6 z-50">
@@ -177,19 +177,9 @@ const Withdrawal = () => {
         ))}
       </div>
 
-      <div className={`w-full max-w-sm sm:max-w-md lg:max-w-2xl space-y-4 sm:space-y-6 lg:space-y-8 transition-all duration-700 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+      <div className={`w-full max-w-xs sm:max-w-lg lg:max-w-6xl space-y-3 sm:space-y-4 lg:space-y-6 transition-all duration-700 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
         
-        {/* Back Navigation */}
-        <motion.button
-          onClick={() => navigate("/client-dashboard")}
-          className="group flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium transition-all duration-300 hover:-translate-x-1"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <ArrowLeft className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-1" />
-          <span className="text-sm sm:text-base">Back to Dashboard</span>
-        </motion.button>
+      
 
         {/* Header with enhanced design */}
         <motion.div

@@ -12,14 +12,41 @@ import NotFound from "../pages/NotFound";
 import Login from "../features/auth/Login";
 import Register from "../features/auth/Register";
 import KYCForm from "../features/auth/KYCForm";
-import ForgotPassword from "../features/auth/ForgotPassword"; 
-import ResetPassword from "../features/auth/ResetPassword"; // ✅ Added
+import ForgotPassword from "../features/auth/ForgotPassword";
+import ResetPassword from "../features/auth/ResetPassword";
 
 // Dashboards
 import ClientDashboard from "../features/dashboard/ClientDashboard";
 import AdminDashboard from "../features/dashboard/AdminDashboard";
 import WithdrawalForm from "../features/transactions/Withdraw";
 import RequireAuth from "./RequireAuth";
+
+// Error Boundary
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, info) {
+    console.error("ErrorBoundary caught an error:", error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <p className="text-red-600 text-lg">Something went wrong. Please try again later.</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // Slide animation variants
 const slideVariants = {
@@ -28,27 +55,18 @@ const slideVariants = {
   exit: { opacity: 0, x: -80 },
 };
 
-const PageWrapper = ({ children }) => {
-  return (
-    <motion.div
-      variants={slideVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      transition={{
-        duration: 0.5,
-        ease: [0.4, 0, 0.2, 1],
-      }}
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      {children}
-    </motion.div>
-  );
-};
+const PageWrapper = ({ children }) => (
+  <motion.div
+    variants={slideVariants}
+    initial="initial"
+    animate="animate"
+    exit="exit"
+    transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+    style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}
+  >
+    {children}
+  </motion.div>
+);
 
 const AppRoutes = () => {
   const location = useLocation();
@@ -62,8 +80,8 @@ const AppRoutes = () => {
         <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
         <Route path="/register" element={<PageWrapper><Register /></PageWrapper>} />
         <Route path="/kyc" element={<PageWrapper><KYCForm /></PageWrapper>} />
-        <Route path="/forgot-password" element={<PageWrapper><ForgotPassword /></PageWrapper>} /> 
-        <Route path="/reset-password/:uid/:token" element={<PageWrapper><ResetPassword /></PageWrapper>} /> {/* ✅ Added */}
+        <Route path="/forgot-password" element={<PageWrapper><ForgotPassword /></PageWrapper>} />
+        <Route path="/reset-password/:uid/:token" element={<PageWrapper><ResetPassword /></PageWrapper>} />
 
         {/* Dashboard Routes */}
         <Route
@@ -80,7 +98,11 @@ const AppRoutes = () => {
         />
         <Route
           path="/admin-dashboard"
-          element={<PageWrapper><AdminDashboard /></PageWrapper>}
+          element={
+            <ErrorBoundary>
+              <PageWrapper><AdminDashboard /></PageWrapper>
+            </ErrorBoundary>
+          }
         />
 
         {/* 404 */}

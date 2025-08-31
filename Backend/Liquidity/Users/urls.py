@@ -5,7 +5,9 @@ from .views import (
     UserListView, BlockUserView, UnblockUserView
 )
 
+# All routes in one file
 urlpatterns = [
+    # 🔹 Auth routes
     path("register/", RegisterView.as_view(), name="register"),
     path("login/", LoginView.as_view(), name="login"),
     path("logout/", LogoutView.as_view(), name="logout"),

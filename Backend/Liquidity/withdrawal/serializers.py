@@ -27,6 +27,19 @@ class WithdrawalSerializer(serializers.ModelSerializer):
     """Serializer for returning withdrawal details."""
 
     user_email = serializers.EmailField(source="user.email", read_only=True)
+    user_name = serializers.SerializerMethodField()
+    user_phone = serializers.CharField(source="mobile_number", read_only=True)
+
+    def get_user_name(self, obj):
+        # Try first_name + last_name, fallback to full_name, then username
+        user = obj.user
+        if hasattr(user, 'first_name') and hasattr(user, 'last_name') and user.first_name and user.last_name:
+            return f"{user.first_name} {user.last_name}"
+        if hasattr(user, 'full_name') and user.full_name:
+            return user.full_name
+        if hasattr(user, 'username') and user.username:
+            return user.username
+        return "Unknown User"
 
     class Meta:
         model = Withdrawal
@@ -34,6 +47,8 @@ class WithdrawalSerializer(serializers.ModelSerializer):
             "id",
             "user",
             "user_email",
+            "user_name",
+            "user_phone",
             "mobile_number",
             "amount",
             "status",

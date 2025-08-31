@@ -105,10 +105,11 @@ const AdminDashboard = () => {
 
       if (usersRes.ok) {
         const usersData = await usersRes.json();
-        setUsers(usersData);
+        const usersArray = Array.isArray(usersData) ? usersData : usersData.results || [];
+        setUsers(usersArray);
         setStats(prev => prev.map(stat => 
           stat.title === 'Total Users' 
-            ? { ...stat, value: usersData.length.toString() }
+            ? { ...stat, value: usersArray.length.toString() }
             : stat
         ));
       } else if (usersRes.status === 401 || usersRes.status === 403) {
@@ -320,12 +321,28 @@ const AdminDashboard = () => {
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
                         <span className="text-white font-semibold text-sm">
-                          {(withdrawal.user?.username?.[0] || 'U').toUpperCase()}
+                          {(
+                            withdrawal.user?.first_name?.[0] ||
+                            withdrawal.user?.last_name?.[0] ||
+                            withdrawal.user?.username?.[0] ||
+                            'U'
+                          ).toUpperCase()}
                         </span>
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">{withdrawal.user?.username || 'Unknown User'}</p>
+                        <p className="font-medium text-gray-900">
+                          {withdrawal.user?.first_name && withdrawal.user?.last_name
+                            ? `${withdrawal.user.first_name} ${withdrawal.user.last_name}`
+                            : withdrawal.user?.first_name
+                              ? withdrawal.user.first_name
+                              : withdrawal.user?.last_name
+                                ? withdrawal.user.last_name
+                                : withdrawal.user?.username
+                                  ? withdrawal.user.username
+                                  : 'Unknown User'}
+                        </p>
                         <p className="text-sm text-gray-600">{withdrawal.user?.email || 'No email'}</p>
+                        <p className="text-sm text-gray-600">{withdrawal.user?.phone_number || 'No mobile'}</p>
                       </div>
                     </div>
                   </td>
@@ -436,14 +453,27 @@ const AdminDashboard = () => {
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
                         <span className="text-white font-semibold text-sm">
-                          {(user.first_name?.[0] || user.username[0]).toUpperCase()}
+                          {(
+                            user.first_name?.[0] ||
+                            user.last_name?.[0] ||
+                            user.username?.[0] ||
+                            'U'
+                          ).toUpperCase()}
                         </span>
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">
-                          {user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.username}
+                          {user.first_name && user.last_name
+                            ? `${user.first_name} ${user.last_name}`
+                            : user.first_name
+                              ? user.first_name
+                              : user.last_name
+                                ? user.last_name
+                                : user.username
+                                  ? user.username
+                                  : 'Unknown User'}
                         </p>
-                        <p className="text-sm text-gray-600">@{user.username}</p>
+                        <p className="text-sm text-gray-600">@{user.username || 'unknown'}</p>
                       </div>
                     </div>
                   </td>
