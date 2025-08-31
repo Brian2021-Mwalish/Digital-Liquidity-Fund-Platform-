@@ -7,6 +7,9 @@ urlpatterns = [
     # Auth routes
     path('api/auth/', include('Users.urls')),
 
-    # Payments routes with /payments/ prefix
-    path('api/payments/', include('payment.urls', namespace='payments')),
+    # Payments routes
+    path('api/payments/', include(('payment.urls', 'payment'), namespace='payments')),
+
+    # Withdrawals routes
+    path('api/', include('withdrawal.urls')),  # removed namespace for simplicity
 ]

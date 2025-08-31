@@ -2,7 +2,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from django.contrib.auth import authenticate, logout, get_user_model
 from django.utils.timezone import now
 from django.conf import settings
@@ -98,6 +98,10 @@ class LoginView(APIView):
         if not user:
             return Response({"error": "Invalid credentials."},
                             status=status.HTTP_401_UNAUTHORIZED)
+
+        if not user.is_active:
+            return Response({"error": "This account is blocked. Contact admin."},
+                            status=status.HTTP_403_FORBIDDEN)
 
         tokens = get_tokens_for_user(user)
         request.session["user_id"] = user.id
@@ -277,3 +281,45 @@ class ResetPasswordView(APIView):
         user.save()
 
         return Response({"message": "Password reset successful."}, status=status.HTTP_200_OK)
+
+
+# ====================================================
+# 🔹 Admin Views (New)
+# ====================================================
+
+class UserListView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        users = CustomUser.objects.all().values("id", "full_name", "email", "is_active", "is_superuser")
+        return Response({"users": list(users)}, status=status.HTTP_200_OK)
+
+
+class BlockUserView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, user_id):
+        try:
+            user = CustomUser.objects.get(pk=user_id)
+            if user.is_superuser:
+                return Response({"error": "You cannot block a superuser."},
+                                status=status.HTTP_403_FORBIDDEN)
+
+            user.is_active = False
+            user.save()
+            return Response({"message": f"User {user.email} has been blocked."},
+                            status=status.HTTP_200_OK)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+class UnblockUserView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, user_id):
+        try:
+            user = CustomUser.objects.get(pk=user_id)
+            user.is_active = True
+            user.save()
+            return Response({"message": f"User {user.email} has been unblocked."},
+                            status=status.HTTP_200_OK)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)

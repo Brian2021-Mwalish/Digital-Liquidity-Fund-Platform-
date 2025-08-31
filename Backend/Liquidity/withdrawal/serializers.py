@@ -3,32 +3,36 @@ from rest_framework import serializers
 from .models import Withdrawal
 
 
-# -----------------------
-# Serializer for User Requests
-# -----------------------
-class WithdrawalRequestSerializer(serializers.ModelSerializer):
+# ---------------------------
+# Serializer for client requests
+# ---------------------------
+class WithdrawalCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating a withdrawal request by the client."""
+
     class Meta:
         model = Withdrawal
-        fields = ["id", "mobile_number", "amount", "status", "created_at"]
-        read_only_fields = ["id", "status", "created_at"]
+        fields = ["id", "mobile_number", "amount"]  # only these are required from client
 
     def validate_amount(self, value):
-        """Prevent invalid withdrawal amounts"""
+        """Ensure amount is positive before saving."""
         if value <= 0:
             raise serializers.ValidationError("Withdrawal amount must be greater than zero.")
         return value
 
 
-# -----------------------
-# Serializer for Admin Dashboard
-# -----------------------
-class WithdrawalAdminSerializer(serializers.ModelSerializer):
+# ---------------------------
+# Serializer for listing withdrawals (user & admin)
+# ---------------------------
+class WithdrawalSerializer(serializers.ModelSerializer):
+    """Serializer for returning withdrawal details."""
+
     user_email = serializers.EmailField(source="user.email", read_only=True)
 
     class Meta:
         model = Withdrawal
         fields = [
             "id",
+            "user",
             "user_email",
             "mobile_number",
             "amount",
@@ -36,4 +40,20 @@ class WithdrawalAdminSerializer(serializers.ModelSerializer):
             "created_at",
             "processed_at",
         ]
-        read_only_fields = ["id", "user_email", "mobile_number", "amount", "created_at", "processed_at", "status"]
+        read_only_fields = ["user", "status", "created_at", "processed_at"]
+
+
+# ---------------------------
+# Serializer for admin status update
+# ---------------------------
+class WithdrawalStatusUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for updating withdrawal status by admin."""
+
+    class Meta:
+        model = Withdrawal
+        fields = ["status"]
+
+    def validate_status(self, value):
+        if value not in dict(Withdrawal.STATUS_CHOICES):
+            raise serializers.ValidationError("Invalid status.")
+        return value

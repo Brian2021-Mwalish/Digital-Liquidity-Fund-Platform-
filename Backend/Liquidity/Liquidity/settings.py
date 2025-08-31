@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     # Local apps
     'Users',
     'payment',
+    'withdrawal',
 ]
 
 # Google OAuth

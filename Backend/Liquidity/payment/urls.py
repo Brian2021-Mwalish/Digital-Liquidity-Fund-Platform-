@@ -2,7 +2,6 @@
 from django.urls import path
 from .views import (
     GetBalanceView,
-    MakePaymentView,
     PaymentHistoryView,
     AdminPaymentsOverviewView,
     MpesaPaymentView,
@@ -16,7 +15,6 @@ urlpatterns = [
     # User wallet endpoints
     # ---------------------------
     path("balance/", GetBalanceView.as_view(), name="get-balance"),
-    path("make/", MakePaymentView.as_view(), name="make-payment"),
     path("history/", PaymentHistoryView.as_view(), name="payment-history"),
 
     # ---------------------------

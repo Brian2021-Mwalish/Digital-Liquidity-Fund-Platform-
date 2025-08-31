@@ -12,7 +12,7 @@ from rest_framework import status, permissions
 from django.contrib.auth import get_user_model
 from django.db.models import Sum
 
-from .models import Payment
+from .models import Payment, Wallet
 from .serializers import PaymentSerializer
 
 User = get_user_model()
@@ -56,58 +56,12 @@ class GetBalanceView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        return Response({"balance": request.user.balance}, status=status.HTTP_200_OK)
+        wallet, _ = Wallet.objects.get_or_create(user=request.user)
+        return Response({"balance": wallet.balance}, status=status.HTTP_200_OK)
 
 
 # ---------------------------
-# 2. Wallet Payment (POST)
-# ---------------------------
-class MakePaymentView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def post(self, request):
-        try:
-            user = request.user
-            card_currency = request.data.get("currency")
-
-            if not card_currency or card_currency not in CURRENCY_COSTS:
-                return Response(
-                    {"error": "Unsupported or missing currency"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            deduction = CURRENCY_COSTS[card_currency]
-
-            if user.balance < deduction:
-                return Response(
-                    {"error": "Insufficient balance"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            user.balance -= deduction
-            user.save(update_fields=["balance"])
-
-            payment = Payment.objects.create(
-                user=user,
-                currency="KES",
-                amount_deducted=deduction,
-                status="completed",
-            )
-
-            return Response(
-                {
-                    "message": f"Payment successful (Card: {card_currency}, Deducted: {deduction} KES)",
-                    "payment": PaymentSerializer(payment).data,
-                    "new_balance": user.balance,
-                },
-                status=status.HTTP_201_CREATED,
-            )
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-# ---------------------------
-# 3. Initiate Mpesa STK Push
+# 2. Initiate Mpesa STK Push
 # ---------------------------
 class MpesaPaymentView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -173,7 +127,7 @@ class MpesaPaymentView(APIView):
 
 
 # ---------------------------
-# 4. Mpesa Callback
+# 3. Mpesa Callback
 # ---------------------------
 @method_decorator(csrf_exempt, name="dispatch")
 class MpesaCallbackView(APIView):
@@ -199,8 +153,9 @@ class MpesaCallbackView(APIView):
                 if amount and phone:
                     try:
                         user = User.objects.get(phone_number=phone)
-                        user.balance += amount
-                        user.save(update_fields=["balance"])
+                        wallet, _ = Wallet.objects.get_or_create(user=user)
+                        wallet.balance += amount
+                        wallet.save(update_fields=["balance"])
 
                         Payment.objects.create(
                             user=user,
@@ -217,7 +172,7 @@ class MpesaCallbackView(APIView):
 
 
 # ---------------------------
-# 5. Payment History (GET)
+# 4. Payment History (GET)
 # ---------------------------
 class PaymentHistoryView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -229,7 +184,7 @@ class PaymentHistoryView(APIView):
 
 
 # ---------------------------
-# 6. Admin Payments Overview (GET all)
+# 5. Admin Payments Overview (GET all)
 # ---------------------------
 class AdminPaymentsOverviewView(APIView):
     permission_classes = [permissions.IsAdminUser]
