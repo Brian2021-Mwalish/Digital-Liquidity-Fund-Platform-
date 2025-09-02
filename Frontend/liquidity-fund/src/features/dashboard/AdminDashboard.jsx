@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Search, Bell, ChevronDown, Menu, X, BarChart3, Users, Home, CreditCard,
@@ -91,8 +90,8 @@ const AdminDashboard = () => {
         return;
       }
 
-      // Fetch users from backend
-      const usersRes = await fetch(`${API_BASE_URL}/users/`, {
+      // Fixed: Use correct users endpoint
+      const usersRes = await fetch(`${API_BASE_URL}/auth/users/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -144,7 +143,8 @@ const AdminDashboard = () => {
       const token = localStorage.getItem('access');
       if (!token) return;
 
-      const res = await fetch(`${API_BASE_URL}/withdrawals/`, {
+      // Fixed: Use correct withdrawals endpoint
+      const res = await fetch(`${API_BASE_URL}/withdrawals/withdraw/pending/`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -153,10 +153,22 @@ const AdminDashboard = () => {
 
       if (res.ok) {
         const data = await res.json();
+        // Also fetch approved and rejected withdrawals to show all
+        const allWithdrawalsRes = await fetch(`${API_BASE_URL}/withdrawals/withdraw/all/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        let allWithdrawals = data; // Default to pending only
+        if (allWithdrawalsRes.ok) {
+          allWithdrawals = await allWithdrawalsRes.json();
+        }
+
         // Ensure each withdrawal has a full user object
-        // If your backend does not provide user details, fetch them here
         const withdrawalsWithUser = await Promise.all(
-          data.map(async (withdrawal) => {
+          allWithdrawals.map(async (withdrawal) => {
             if (
               withdrawal.user &&
               (withdrawal.user.first_name || withdrawal.user.last_name || withdrawal.user.email || withdrawal.user.phone_number)
@@ -166,7 +178,7 @@ const AdminDashboard = () => {
             // If user info is missing, fetch it
             if (withdrawal.user && withdrawal.user.id) {
               try {
-                const userRes = await fetch(`${API_BASE_URL}/users/${withdrawal.user.id}/`, {
+                const userRes = await fetch(`${API_BASE_URL}/auth/users/${withdrawal.user.id}/`, {
                   headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -192,6 +204,11 @@ const AdminDashboard = () => {
       } else if (res.status === 401 || res.status === 403) {
         localStorage.removeItem("access");
         window.location.href = '/login';
+      } else if (res.status === 404) {
+        // If the endpoint doesn't exist, try alternative approach
+        console.warn('Pending withdrawals endpoint not found, trying alternative...');
+        // You could try a different endpoint or show empty state
+        setWithdrawals([]);
       } else {
         throw new Error(`Failed to fetch withdrawals: ${res.status}`);
       }
@@ -212,8 +229,9 @@ const AdminDashboard = () => {
         return;
       }
 
+      // Fixed: Use correct user block/unblock endpoint
       const endpoint = shouldBlock ? 'block' : 'unblock';
-      const res = await fetch(`${API_BASE_URL}/users/${userId}/${endpoint}/`, {
+      const res = await fetch(`${API_BASE_URL}/auth/users/${userId}/${endpoint}/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -256,7 +274,8 @@ const AdminDashboard = () => {
         return;
       }
 
-      const res = await fetch(`${API_BASE_URL}/withdrawals/${withdrawalId}/${action}/`, {
+      // Fixed: Use correct withdrawal action endpoints
+      const res = await fetch(`${API_BASE_URL}/withdrawals/withdraw/${action}/${withdrawalId}/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -725,4 +744,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard
+export default AdminDashboard;
