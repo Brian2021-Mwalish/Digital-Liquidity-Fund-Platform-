@@ -13,8 +13,8 @@ urlpatterns = [
     # 🔹 Payments routes
     path("api/payments/", include(("payment.urls", "payment"), namespace="payments")),
 
-    # 🔹 Withdrawals routes
-    path("api/withdrawals/", include(("withdrawal.urls", "withdrawal"), namespace="withdrawal")),
+    # 🔹 Withdrawals routes (updated to match frontend /api/withdraw/)
+    path("api/withdraw/", include(("withdrawal.urls", "withdrawal"), namespace="withdrawal")),
 
     # 🔹 Direct profile shortcut (frontend can call /api/profile/)
     path("api/profile/", ProfileView.as_view(), name="profile-direct"),

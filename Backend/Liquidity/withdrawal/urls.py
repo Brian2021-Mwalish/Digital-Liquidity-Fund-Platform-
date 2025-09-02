@@ -1,21 +1,23 @@
 from django.urls import path
 from .views import (
+    ping,
     WithdrawalRequestView,
     WithdrawalHistoryView,
     WithdrawalListView,
     WithdrawalApproveView,
     WithdrawalRejectView,
-    ping,  # add this
 )
 
 urlpatterns = [
-    path("ping/", ping, name="withdrawal-ping"),  # <-- test route
+    # Debugging
+    path('ping/', ping, name='withdrawal-ping'),
 
-    path("withdraw/", WithdrawalRequestView.as_view(), name="withdraw-alias"),
-    path("withdrawals/request/", WithdrawalRequestView.as_view(), name="withdraw-request"),
-    path("withdrawals/history/", WithdrawalHistoryView.as_view(), name="withdrawal-history"),
+    # User actions
+    path('', WithdrawalRequestView.as_view(), name='withdraw-request'),  # POST /api/withdraw/
+    path('history/', WithdrawalHistoryView.as_view(), name='withdraw-history'),
 
-    path("withdrawals/", WithdrawalListView.as_view(), name="withdrawal-list"),
-    path("withdrawals/<int:withdrawal_id>/approve/", WithdrawalApproveView.as_view(), name="withdrawal-approve"),
-    path("withdrawals/<int:withdrawal_id>/reject/", WithdrawalRejectView.as_view(), name="withdrawal-reject"),
+    # Admin actions
+    path('pending/', WithdrawalListView.as_view(), name='withdraw-pending'),
+    path('approve/<int:withdrawal_id>/', WithdrawalApproveView.as_view(), name='withdraw-approve'),
+    path('reject/<int:withdrawal_id>/', WithdrawalRejectView.as_view(), name='withdraw-reject'),
 ]

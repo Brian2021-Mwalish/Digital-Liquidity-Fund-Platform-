@@ -21,7 +21,7 @@ const ClientDashboard = () => {
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [pendingReturns, setPendingReturns] = useState(0);
 
-  const token = localStorage.getItem('token') || localStorage.getItem('jwt');
+  const token = localStorage.getItem('access'); // always use 'access' token
 
   const currencies = [
     { code: 'CAD', name: 'Canadian Dollar', price: 100 },
@@ -180,13 +180,19 @@ const ClientDashboard = () => {
         try {
           // Example: replace with your actual endpoints
           const earningsRes = await fetch(`${API_BASE_URL}/api/payments/earnings/`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
           });
           const earningsData = earningsRes.ok ? await earningsRes.json() : {};
           setTotalEarnings(earningsData.total_earnings || 0);
 
           const returnsRes = await fetch(`${API_BASE_URL}/api/rentals/pending-returns/`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
           });
           const returnsData = returnsRes.ok ? await returnsRes.json() : {};
           setPendingReturns(returnsData.pending_returns || 0);
@@ -201,12 +207,12 @@ const ClientDashboard = () => {
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const token = localStorage.getItem("access") || localStorage.getItem("token") || localStorage.getItem("jwt");
+      const token = localStorage.getItem('access'); // always use 'access' token
       try {
         const res = await fetch(`${API_BASE_URL}/api/profile/`, {
           headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json",
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           },
         });
         if (res.ok) {

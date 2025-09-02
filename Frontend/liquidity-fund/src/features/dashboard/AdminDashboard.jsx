@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Search, Bell, ChevronDown, Menu, X, BarChart3, Users, Home, CreditCard,
@@ -70,14 +71,6 @@ const AdminDashboard = () => {
     }
   }, [users, withdrawals, searchTerm, filterStatus, activeSection]);
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem("access");
-    return {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json"
-    };
-  };
-
   const handleApiError = (error, operation) => {
     console.error(`Error ${operation}:`, error);
     if (error.message.includes('401') || error.message.includes('403')) {
@@ -92,7 +85,7 @@ const AdminDashboard = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("access");
+      const token = localStorage.getItem('access');
       if (!token) {
         window.location.href = '/login';
         return;
@@ -100,7 +93,10 @@ const AdminDashboard = () => {
 
       // Fetch users from backend
       const usersRes = await fetch(`${API_BASE_URL}/users/`, {
-        headers: getAuthHeaders()
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (usersRes.ok) {
@@ -122,7 +118,10 @@ const AdminDashboard = () => {
 
       // Fetch admin profile
       const profileRes = await fetch(`${API_BASE_URL}/auth/profile/`, {
-        headers: getAuthHeaders()
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (profileRes.ok) {
@@ -142,11 +141,14 @@ const AdminDashboard = () => {
 
   const fetchWithdrawals = async () => {
     try {
-      const token = localStorage.getItem("access");
+      const token = localStorage.getItem('access');
       if (!token) return;
 
       const res = await fetch(`${API_BASE_URL}/withdrawals/`, {
-        headers: getAuthHeaders()
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (res.ok) {
@@ -165,7 +167,10 @@ const AdminDashboard = () => {
             if (withdrawal.user && withdrawal.user.id) {
               try {
                 const userRes = await fetch(`${API_BASE_URL}/users/${withdrawal.user.id}/`, {
-                  headers: getAuthHeaders()
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                  }
                 });
                 if (userRes.ok) {
                   const userData = await userRes.json();
@@ -201,7 +206,7 @@ const AdminDashboard = () => {
     
     try {
       setLoading(true);
-      const token = localStorage.getItem("access");
+      const token = localStorage.getItem('access');
       if (!token) {
         window.location.href = '/login';
         return;
@@ -210,7 +215,10 @@ const AdminDashboard = () => {
       const endpoint = shouldBlock ? 'block' : 'unblock';
       const res = await fetch(`${API_BASE_URL}/users/${userId}/${endpoint}/`, {
         method: 'POST',
-        headers: getAuthHeaders()
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (res.ok) {
@@ -242,7 +250,7 @@ const AdminDashboard = () => {
     
     try {
       setLoading(true);
-      const token = localStorage.getItem("access");
+      const token = localStorage.getItem('access');
       if (!token) {
         window.location.href = '/login';
         return;
@@ -250,7 +258,10 @@ const AdminDashboard = () => {
 
       const res = await fetch(`${API_BASE_URL}/withdrawals/${withdrawalId}/${action}/`, {
         method: 'POST',
-        headers: getAuthHeaders()
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (res.ok) {
@@ -272,11 +283,14 @@ const AdminDashboard = () => {
 
   const handleLogout = async () => {
     try {
-      const token = localStorage.getItem("access");
+      const token = localStorage.getItem('access');
       if (token) {
         await fetch(`${API_BASE_URL}/auth/logout/`, {
           method: 'POST',
-          headers: getAuthHeaders()
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         });
       }
     } catch (error) {
@@ -711,4 +725,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard;
+export default AdminDashboard

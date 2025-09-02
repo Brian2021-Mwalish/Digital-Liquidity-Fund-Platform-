@@ -59,8 +59,7 @@ const Withdrawal = () => {
     setFeedback("⏳ Checking your wallet balance and processing request...");
 
     try {
-      // ✅ Use the same token key as ClientDashboard
-      const token = localStorage.getItem("token") || localStorage.getItem("jwt");
+      const token = localStorage.getItem('access'); // always use 'access' token
 
       if (!token) {
         setStatus("error");
@@ -72,8 +71,8 @@ const Withdrawal = () => {
       const response = await fetch(`${API_BASE_URL}/api/withdraw/`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // 🔑 consistent JWT handling
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           mobile_number: mobileNumber,
