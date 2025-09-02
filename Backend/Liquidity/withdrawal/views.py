@@ -1,7 +1,7 @@
 # withdrawal/views.py
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status, permissions
+from rest_framework import status, permissions, viewsets
 from django.http import JsonResponse
 from .models import Withdrawal
 from .serializers import (
@@ -159,3 +159,11 @@ class WithdrawalRejectView(APIView):
             {"message": "Withdrawal has been rejected, funds refunded to wallet."},
             status=status.HTTP_200_OK,
         )
+
+
+# -----------------------
+# ViewSet for Withdrawal (CRUD operations)
+# -----------------------
+class WithdrawalViewSet(viewsets.ModelViewSet):
+    queryset = Withdrawal.objects.all()
+    serializer_class = WithdrawalSerializer

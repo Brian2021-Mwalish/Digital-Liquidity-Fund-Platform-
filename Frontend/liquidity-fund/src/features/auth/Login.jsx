@@ -33,8 +33,8 @@ const Login = () => {
     const handleMouseMove = (e) => {
       setMousePosition({ x: e.clientX, y: e.clientY });
     };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
   const showAllMessages = (result, type = "success") => {
@@ -46,7 +46,9 @@ const Login = () => {
       Object.entries(result).forEach(([key, value]) => {
         if (Array.isArray(value)) {
           value.forEach((msg) =>
-            type === "success" ? toast.success(`${key.toUpperCase()}: ${msg}`) : toast.error(`${key.toUpperCase()}: ${msg}`)
+            type === "success"
+              ? toast.success(`${key.toUpperCase()}: ${msg}`)
+              : toast.error(`${key.toUpperCase()}: ${msg}`)
           );
         } else {
           type === "success"
@@ -57,25 +59,31 @@ const Login = () => {
     }
   };
 
-  const handleLoginNavigation = (result) => {
-    const token = result.token || result.access;
-    if (token) {
-      localStorage.setItem("jwt", token);
-      // ✅ Store token under "access" so AdminDashboard.jsx can find it
-      localStorage.setItem("access", token);
+  const handleLoginNavigation = async (access, refresh) => {
+    try {
+      localStorage.setItem("access", access);
+      localStorage.setItem("refresh", refresh);
 
-      const user = result.user;
-      if (user) {
-        localStorage.setItem("client_name", user.full_name || user.username || "");
+      const res = await fetch("http://localhost:8000/api/auth/profile/", {
+        headers: { Authorization: `Bearer ${access}` },
+      });
 
-        if (user.is_superuser) {
-          navigate("/admin-dashboard");
-        } else {
-          navigate("/client-dashboard");
-        }
+      if (!res.ok) throw new Error("Failed to fetch profile");
+
+      const user = await res.json();
+      localStorage.setItem("profile", JSON.stringify(user));
+      localStorage.setItem("client_name", user.full_name || user.username || "");
+
+      if (user.is_superuser) {
+        navigate("/admin-dashboard");
+      } else {
+        navigate("/client-dashboard");
       }
-    } else {
-      toast.error("Invalid login. No access token returned. Contact support.");
+    } catch (error) {
+      toast.error("Profile fetch failed: " + error.message);
+      localStorage.removeItem("access");
+      localStorage.removeItem("refresh");
+      localStorage.removeItem("profile");
     }
   };
 
@@ -90,12 +98,24 @@ const Login = () => {
       const result = await res.json();
 
       if (!res.ok) {
-        showAllMessages(result, "error");
+        if (result.detail) {
+          toast.error(result.detail);
+        } else if (typeof result === "object") {
+          Object.entries(result).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+              value.forEach((msg) => toast.error(`${key.toUpperCase()}: ${msg}`));
+            } else {
+              toast.error(`${key.toUpperCase()}: ${value}`);
+            }
+          });
+        } else {
+          toast.error("Login failed. Please try again.");
+        }
         return;
       }
 
-      showAllMessages(result, "success");
-      handleLoginNavigation(result);
+      toast.success("Login successful ✅");
+      await handleLoginNavigation(result.access, result.refresh);
     } catch (error) {
       toast.error("SERVER ERROR: " + error.message);
     }
@@ -103,7 +123,7 @@ const Login = () => {
 
   const handleGoogleLogin = async (credentialResponse) => {
     try {
-      const res = await fetch("http://localhost:8000/api/auth/google/", {
+      const res = await fetch("http://localhost:8000/api/auth/google-login/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: credentialResponse.credential }),
@@ -117,7 +137,7 @@ const Login = () => {
       }
 
       showAllMessages(result, "success");
-      handleLoginNavigation(result);
+      await handleLoginNavigation(result.access, result.refresh);
     } catch (error) {
       toast.error("SERVER ERROR: " + error.message);
     }
@@ -125,15 +145,18 @@ const Login = () => {
 
   return (
     <div className="fixed inset-0 w-screen h-screen bg-gradient-to-br from-indigo-100 via-white to-blue-100 flex items-center justify-center p-2 sm:p-4 lg:p-6 overflow-hidden">
-      {/* Dynamic background elements */}
-      <div 
+      <div
         className="absolute inset-0 opacity-20 pointer-events-none"
         style={{
-          background: `radial-gradient(circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(99, 102, 241, 0.1) 0%, transparent 50%)`
+          background: `radial-gradient(circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(99, 102, 241, 0.1) 0%, transparent 50%)`,
         }}
       />
-      
-      <div className={`w-full max-w-sm sm:max-w-md lg:max-w-2xl space-y-4 sm:space-y-6 lg:space-y-8 transition-all duration-700 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+
+      <div
+        className={`w-full max-w-sm sm:max-w-md lg:max-w-2xl space-y-4 sm:space-y-6 lg:space-y-8 transition-all duration-700 ${
+          isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+        }`}
+      >
         <div className="mb-2">
           <NavigationArrow label="Back to Home" to="/" />
         </div>
@@ -212,8 +235,7 @@ const Login = () => {
                   </button>
                 </div>
                 {errors.password && <p className="text-xs text-red-500 mt-1 animate-pulse">{errors.password.message}</p>}
-                
-                {/* Forgot Password Link */}
+
                 <div className="text-right mt-2">
                   <Link
                     to="/forgot-password"

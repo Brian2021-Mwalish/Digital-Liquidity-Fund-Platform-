@@ -1,18 +1,21 @@
+# project_root/urls.py
 from django.contrib import admin
 from django.urls import path, include
+from Users.views import ProfileView  # ✅ Ensure correct import (capital 'U')
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    # 🔹 Admin
+    path("admin/", admin.site.urls),
 
-    # 🔹 Auth routes (/api/auth/...)
-    path('api/auth/', include('Users.urls')),
-
-    # 🔹 User management routes (/api/users/...) for AdminDashboard
-    path('api/', include('Users.urls')),  # ensures /api/users/ exists
+    # 🔹 Auth & User routes
+    path("api/auth/", include(("Users.urls", "users"), namespace="users")),  # matches your Users app
 
     # 🔹 Payments routes
-    path('api/payments/', include(('payment.urls', 'payment'), namespace='payments')),
+    path("api/payments/", include(("payment.urls", "payment"), namespace="payments")),
 
     # 🔹 Withdrawals routes
-    path('api/', include('withdrawal.urls')),  # no namespace
+    path("api/withdrawals/", include(("withdrawal.urls", "withdrawal"), namespace="withdrawal")),
+
+    # 🔹 Direct profile shortcut (frontend can call /api/profile/)
+    path("api/profile/", ProfileView.as_view(), name="profile-direct"),
 ]

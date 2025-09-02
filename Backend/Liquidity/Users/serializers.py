@@ -1,40 +1,50 @@
-# users/serializers.py
 from rest_framework import serializers
-from .models import CustomUser, UserSession
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from .models import CustomUser, UserSession, KYCProfile
 
 
 # -----------------------
 # User Serializer
 # -----------------------
 class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CustomUser
-        fields = ["id", "email", "full_name", "date_joined", "is_active", "username", "first_name", "last_name"]
-
-    # Add username, first_name, last_name for compatibility with frontend
     username = serializers.SerializerMethodField()
     first_name = serializers.SerializerMethodField()
     last_name = serializers.SerializerMethodField()
 
+    class Meta:
+        model = CustomUser
+        fields = [
+            "id",
+            "email",
+            "full_name",
+            "date_joined",
+            "is_active",
+            "username",
+            "first_name",
+            "last_name",
+            "is_superuser",
+        ]
+
     def get_username(self, obj):
-        if obj.email and isinstance(obj.email, str) and '@' in obj.email:
-            return obj.email.split('@')[0]
+        if obj.email and isinstance(obj.email, str) and "@" in obj.email:
+            return obj.email.split("@")[0]
         return ""
 
     def get_first_name(self, obj):
         full_name = obj.full_name if obj.full_name and isinstance(obj.full_name, str) else ""
-        if hasattr(obj, 'first_name') and obj.first_name:
+        if hasattr(obj, "first_name") and obj.first_name:
             return obj.first_name
         if full_name:
-            return full_name.split(' ')[0]
+            return full_name.split(" ")[0]
         return ""
 
     def get_last_name(self, obj):
         full_name = obj.full_name if obj.full_name and isinstance(obj.full_name, str) else ""
-        if hasattr(obj, 'last_name') and obj.last_name:
+        if hasattr(obj, "last_name") and obj.last_name:
             return obj.last_name
-        if full_name and len(full_name.split(' ')) > 1:
-            return ' '.join(full_name.split(' ')[1:])
+        if full_name and len(full_name.split(" ")) > 1:
+            return " ".join(full_name.split(" ")[1:])
         return ""
 
 
@@ -65,11 +75,34 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 # -----------------------
-# Login Serializer
+# Login Serializer (with JWT)
 # -----------------------
-class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    password = serializers.CharField(write_only=True)
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """Customize JWT to authenticate with email instead of username"""
+    username_field = CustomUser.USERNAME_FIELD  # "email"
+
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        # Add custom claims
+        token["email"] = user.email
+        token["full_name"] = user.full_name
+        token["is_superuser"] = user.is_superuser
+        return token
+
+    def validate(self, attrs):
+        email = attrs.get("email")
+        password = attrs.get("password")
+
+        user = authenticate(request=self.context.get("request"), email=email, password=password)
+        if not user:
+            raise serializers.ValidationError("Invalid email or password")
+        if not user.is_active:
+            raise serializers.ValidationError("User account is disabled")
+
+        data = super().validate(attrs)
+        data["user"] = UserSerializer(user).data
+        return data
 
 
 # -----------------------
@@ -90,3 +123,29 @@ class UserSessionSerializer(serializers.ModelSerializer):
             "logout_time",
             "is_active",
         ]
+
+
+# -----------------------
+# KYC Profile Serializer
+# -----------------------
+class KYCProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = KYCProfile
+        fields = ["id_number", "date_of_birth", "address", "is_verified", "submitted_at"]
+
+
+# -----------------------
+# User Profile Serializer
+# -----------------------
+class UserProfileSerializer(serializers.ModelSerializer):
+    kyc = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CustomUser
+        fields = ["id", "email", "full_name", "phone_number", "kyc", "is_superuser"]
+
+    def get_kyc(self, obj):
+        kyc = getattr(obj, "kyc", None)
+        if kyc:
+            return KYCProfileSerializer(kyc).data
+        return None

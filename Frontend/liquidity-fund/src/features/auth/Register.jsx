@@ -54,14 +54,16 @@ const Register = () => {
       const data = await res.json();
 
       if (!res.ok) {
-        // ✅ Collect and display all errors
+        // Collect and display all errors as popups
         let errorMessages = [];
 
         if (typeof data === "object") {
           for (const [key, value] of Object.entries(data)) {
             if (Array.isArray(value)) {
-              errorMessages.push(...value);
-              setError(key, { type: "server", message: value.join(" ") });
+              value.forEach((msg) => {
+                errorMessages.push(msg);
+                setError(key, { type: "server", message: msg });
+              });
             } else if (typeof value === "string") {
               errorMessages.push(value);
               setError(key, { type: "server", message: value });
@@ -72,7 +74,6 @@ const Register = () => {
         }
 
         if (errorMessages.length > 0) {
-          // show each error separately
           errorMessages.forEach((msg, i) => {
             toast.error(msg, { id: `register-error-${i}` });
           });
@@ -80,13 +81,19 @@ const Register = () => {
           toast.error("Registration failed", { id: "register" });
         }
 
+        toast.dismiss("register");
+        setLoading(false);
         return;
       }
 
       toast.success("Account created successfully! Redirecting to login...", { id: "register" });
-      setTimeout(() => navigate("/login"), 1500);
+      setTimeout(() => {
+        toast.dismiss("register");
+        navigate("/login");
+      }, 1500);
     } catch (error) {
       toast.error(error.message || "Something went wrong", { id: "register" });
+      toast.dismiss("register");
     } finally {
       setLoading(false);
     }

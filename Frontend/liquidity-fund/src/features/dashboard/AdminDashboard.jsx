@@ -151,10 +151,37 @@ const AdminDashboard = () => {
 
       if (res.ok) {
         const data = await res.json();
-        setWithdrawals(data);
+        // Ensure each withdrawal has a full user object
+        // If your backend does not provide user details, fetch them here
+        const withdrawalsWithUser = await Promise.all(
+          data.map(async (withdrawal) => {
+            if (
+              withdrawal.user &&
+              (withdrawal.user.first_name || withdrawal.user.last_name || withdrawal.user.email || withdrawal.user.phone_number)
+            ) {
+              return withdrawal;
+            }
+            // If user info is missing, fetch it
+            if (withdrawal.user && withdrawal.user.id) {
+              try {
+                const userRes = await fetch(`${API_BASE_URL}/users/${withdrawal.user.id}/`, {
+                  headers: getAuthHeaders()
+                });
+                if (userRes.ok) {
+                  const userData = await userRes.json();
+                  return { ...withdrawal, user: userData };
+                }
+              } catch (e) {
+                // fallback to withdrawal as is
+              }
+            }
+            return withdrawal;
+          })
+        );
+        setWithdrawals(withdrawalsWithUser);
         setStats(prev => prev.map(stat => 
           stat.title === 'Pending Withdrawals' 
-            ? { ...stat, value: data.filter(w => w.status === 'pending').length.toString() }
+            ? { ...stat, value: withdrawalsWithUser.filter(w => w.status === 'pending').length.toString() }
             : stat
         ));
       } else if (res.status === 401 || res.status === 403) {
@@ -297,99 +324,98 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {loading && (
-          <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+          <div className="col-span-full flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
         )}
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left py-4 px-6 font-medium text-gray-900">User</th>
-                <th className="text-left py-4 px-6 font-medium text-gray-900">Amount</th>
-                <th className="text-left py-4 px-6 font-medium text-gray-900">Status</th>
-                <th className="text-left py-4 px-6 font-medium text-gray-900">Date</th>
-                <th className="text-left py-4 px-6 font-medium text-gray-900">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredWithdrawals.map((withdrawal) => (
-                <tr key={withdrawal.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="py-4 px-6">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
-                        <span className="text-white font-semibold text-sm">
-                          {(
-                            withdrawal.user?.first_name?.[0] ||
-                            withdrawal.user?.last_name?.[0] ||
-                            withdrawal.user?.username?.[0] ||
-                            'U'
-                          ).toUpperCase()}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {withdrawal.user?.first_name && withdrawal.user?.last_name
-                            ? `${withdrawal.user.first_name} ${withdrawal.user.last_name}`
-                            : withdrawal.user?.first_name
-                              ? withdrawal.user.first_name
-                              : withdrawal.user?.last_name
-                                ? withdrawal.user.last_name
-                                : withdrawal.user?.username
-                                  ? withdrawal.user.username
-                                  : 'Unknown User'}
-                        </p>
-                        <p className="text-sm text-gray-600">{withdrawal.user?.email || 'No email'}</p>
-                        <p className="text-sm text-gray-600">{withdrawal.user?.phone_number || 'No mobile'}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-4 px-6 text-gray-900 font-semibold">${withdrawal.amount}</td>
-                  <td className="py-4 px-6">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                      withdrawal.status === 'approved' ? 'bg-green-100 text-green-800' : 
-                      withdrawal.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {withdrawal.status === 'approved' ? <><CheckCircle size={12} className="mr-1" />Approved</> : 
-                       withdrawal.status === 'rejected' ? <><XCircle size={12} className="mr-1" />Rejected</> : 
-                       <><Clock size={12} className="mr-1" />Pending</>}
-                    </span>
-                  </td>
-                  <td className="py-4 px-6 text-gray-600">{new Date(withdrawal.created_at).toLocaleDateString()}</td>
-                  <td className="py-4 px-6">
-                    {withdrawal.status === 'pending' ? (
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => handleWithdrawalAction(withdrawal.id, 'approve')}
-                          disabled={loading}
-                          className="px-3 py-1 text-xs font-medium rounded-md bg-green-100 text-green-700 hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => handleWithdrawalAction(withdrawal.id, 'reject')}
-                          disabled={loading}
-                          className="px-3 py-1 text-xs font-medium rounded-md bg-red-100 text-red-700 hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-500">No actions</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {filteredWithdrawals.length === 0 && !loading && (
-          <div className="text-center py-12">
+        {filteredWithdrawals.length === 0 && !loading ? (
+          <div className="col-span-full text-center py-12">
             <DollarSign size={48} className="mx-auto text-gray-300 mb-4" />
             <p className="text-gray-600 text-lg">No withdrawals found</p>
           </div>
+        ) : (
+          filteredWithdrawals.map((withdrawal) => {
+            // Ensure we fetch real user details
+            const user = withdrawal.user || {};
+            // Prefer full name, fallback to username, fallback to "Unknown User"
+            const fullName = user.first_name && user.last_name
+              ? `${user.first_name} ${user.last_name}`
+              : user.first_name
+                ? user.first_name
+                : user.last_name
+                  ? user.last_name
+                  : user.username
+                    ? user.username
+                    : 'Unknown User';
+            // Prefer email, fallback to username, fallback to "No email"
+            const email = user.email
+              ? user.email
+              : user.username
+                ? user.username
+                : 'No email';
+            // Prefer phone number, fallback to "No mobile"
+            const phone = user.phone_number || 'No mobile';
+
+            return (
+              <div key={withdrawal.id} className="bg-white rounded-xl shadow-md border border-gray-200 p-6 flex flex-col space-y-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
+                    <span className="text-white font-semibold text-lg">
+                      {(user.first_name?.[0] || user.last_name?.[0] || user.username?.[0] || 'U').toUpperCase()}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">{fullName}</p>
+                    <p className="text-sm text-gray-600">{email}</p>
+                    <p className="text-sm text-gray-600">{phone}</p>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-gray-500 text-xs">Amount</span>
+                  <div className="text-xl font-bold text-gray-900">${withdrawal.amount}</div>
+                </div>
+                <div>
+                  <span className="text-gray-500 text-xs">Status</span>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ml-2 ${
+                    withdrawal.status === 'approved' ? 'bg-green-100 text-green-800' : 
+                    withdrawal.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {withdrawal.status === 'approved' ? <><CheckCircle size={12} className="mr-1" />Approved</> : 
+                     withdrawal.status === 'rejected' ? <><XCircle size={12} className="mr-1" />Rejected</> : 
+                     <><Clock size={12} className="mr-1" />Pending</>}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-500 text-xs">Date</span>
+                  <div className="text-sm text-gray-700">{new Date(withdrawal.created_at).toLocaleDateString()}</div>
+                </div>
+                <div>
+                  {withdrawal.status === 'pending' ? (
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => handleWithdrawalAction(withdrawal.id, 'approve')}
+                        disabled={loading}
+                        className="px-3 py-1 text-xs font-medium rounded-md bg-green-100 text-green-700 hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleWithdrawalAction(withdrawal.id, 'reject')}
+                        disabled={loading}
+                        className="px-3 py-1 text-xs font-medium rounded-md bg-red-100 text-red-700 hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-gray-500">No actions</span>
+                  )}
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
     </div>

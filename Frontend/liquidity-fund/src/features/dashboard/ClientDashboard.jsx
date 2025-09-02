@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from "react";
+import KYCForm from "../auth/KYCForm";
 import { Link } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -16,6 +17,9 @@ const ClientDashboard = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState('');
   const [paymentHistory, setPaymentHistory] = useState([]);
+  const [profile, setProfile] = useState(null);
+  const [totalEarnings, setTotalEarnings] = useState(0);
+  const [pendingReturns, setPendingReturns] = useState(0);
 
   const token = localStorage.getItem('token') || localStorage.getItem('jwt');
 
@@ -171,8 +175,55 @@ const ClientDashboard = () => {
     if (token) {
       fetchBalance();
       fetchPaymentHistory();
+      // Fetch stats from backend
+      const fetchStats = async () => {
+        try {
+          // Example: replace with your actual endpoints
+          const earningsRes = await fetch(`${API_BASE_URL}/api/payments/earnings/`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const earningsData = earningsRes.ok ? await earningsRes.json() : {};
+          setTotalEarnings(earningsData.total_earnings || 0);
+
+          const returnsRes = await fetch(`${API_BASE_URL}/api/rentals/pending-returns/`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const returnsData = returnsRes.ok ? await returnsRes.json() : {};
+          setPendingReturns(returnsData.pending_returns || 0);
+        } catch (error) {
+          setTotalEarnings(0);
+          setPendingReturns(0);
+        }
+      };
+      fetchStats();
     }
   }, [token]);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const token = localStorage.getItem("access") || localStorage.getItem("token") || localStorage.getItem("jwt");
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/profile/`, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setProfile(data);
+          // Optionally update clientName and phoneNumber from profile
+          if (data.full_name) setClientName(data.full_name);
+          if (data.phone_number) setPhoneNumber(data.phone_number);
+        } else {
+          setProfile(null);
+        }
+      } catch (error) {
+        setProfile(null);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const StatCard = ({ title, value, subtitle, bgColor = "bg-white" }) => (
     <div className={`${bgColor} border border-gray-200 rounded-xl shadow-lg p-6 hover:shadow-xl transition-all`}>
@@ -226,8 +277,8 @@ const ClientDashboard = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <StatCard title="Active Rentals" value={activeRentals.length} subtitle="Currently earning" bgColor="bg-yellow-50 border-yellow-200" />
-              <StatCard title="Total Earnings" value="KES 45,000" subtitle="This month" bgColor="bg-green-50 border-green-200" />
-              <StatCard title="Pending Returns" value={`KES ${doubledMoney.toLocaleString()}`} subtitle="Expected returns" bgColor="bg-orange-50 border-orange-200" />
+              <StatCard title="Total Earnings" value={`KES ${totalEarnings.toLocaleString()}`} subtitle="This month" bgColor="bg-green-50 border-green-200" />
+              <StatCard title="Pending Returns" value={`KES ${pendingReturns.toLocaleString()}`} subtitle="Expected returns" bgColor="bg-orange-50 border-orange-200" />
             </div>
           </div>
         );
@@ -351,6 +402,8 @@ const ClientDashboard = () => {
     }
   };
 
+  if (!profile) return <div>Loading profile...</div>;
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header with unique gradient */}
@@ -384,7 +437,12 @@ const ClientDashboard = () => {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                     </svg>
-                    Account
+                    <Link
+                                to="/kyc"
+                                className="bg-gradient-to-r from-green-500 to-green-400 hover:from-green-600 hover:to-green-400 text-white px-6 py-3 rounded-lg font-semibold transition shadow w-full md:w-auto text-center"
+                              >
+                                Account
+                     </Link>
                   </button>
                   <button onClick={() => window.location.href = '/login'} className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded-lg text-red-600 flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

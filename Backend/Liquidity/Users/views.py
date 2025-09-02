@@ -1,7 +1,7 @@
 # users/views.py
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, generics, permissions
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from django.contrib.auth import authenticate, logout, get_user_model
 from django.utils.timezone import now
@@ -11,7 +11,8 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 
-from .models import CustomUser
+from .models import CustomUser, KYCProfile
+from .serializers import KYCProfileSerializer, UserProfileSerializer
 
 import logging
 import requests
@@ -61,9 +62,6 @@ class RegisterView(APIView):
             )
             tokens = get_tokens_for_user(user)
 
-            request.session["user_id"] = user.id
-            request.session["last_activity"] = str(now())
-
             return Response({
                 "message": "User registered successfully",
                 "access": tokens["access"],
@@ -77,11 +75,11 @@ class RegisterView(APIView):
             }, status=status.HTTP_201_CREATED)
         except Exception as e:
             logger.error(f"Registration failed: {str(e)}")
-            return Response({"error": f"Registration failed: {str(e)}"},
+            return Response({"error": "Registration failed."},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # -----------------------
-# Login
+# Login with Email + JWT
 # -----------------------
 class LoginView(APIView):
     permission_classes = [AllowAny]
@@ -94,18 +92,22 @@ class LoginView(APIView):
             return Response({"error": "Email and password are required."},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        user = authenticate(request, email=email, password=password)
-        if not user:
-            return Response({"error": "Invalid credentials."},
-                            status=status.HTTP_401_UNAUTHORIZED)
+        try:
+            user = CustomUser.objects.get(email=email)
+        except CustomUser.DoesNotExist:
+            return Response({"error": "No account found with this email."},
+                            status=status.HTTP_404_NOT_FOUND)
 
         if not user.is_active:
             return Response({"error": "This account is blocked. Contact admin."},
                             status=status.HTTP_403_FORBIDDEN)
 
+        user = authenticate(request, username=email, password=password)
+        if user is None:
+            return Response({"error": "Incorrect email or password."},
+                            status=status.HTTP_401_UNAUTHORIZED)
+
         tokens = get_tokens_for_user(user)
-        request.session["user_id"] = user.id
-        request.session["last_activity"] = str(now())
 
         return Response({
             "message": "Login successful",
@@ -128,15 +130,14 @@ class LogoutView(APIView):
     def post(self, request):
         try:
             logout(request)
-            request.session.flush()
             return Response({"message": "Logout successful"}, status=status.HTTP_200_OK)
         except Exception as e:
             logger.error(f"Logout failed: {str(e)}")
-            return Response({"error": f"Logout failed: {str(e)}"},
+            return Response({"error": "Logout failed."},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # -----------------------
-# Google OAuth
+# Google OAuth Login
 # -----------------------
 class GoogleLoginView(APIView):
     permission_classes = [AllowAny]
@@ -155,17 +156,16 @@ class GoogleLoginView(APIView):
             user_data = resp.json()
             email = user_data.get("email")
             full_name = user_data.get("name")
+
             if not email:
                 return Response({"error": "Google token did not return an email."}, status=400)
 
-            user, created = CustomUser.objects.get_or_create(
+            user, _ = CustomUser.objects.get_or_create(
                 email=email,
                 defaults={"full_name": full_name, "password": CustomUser.objects.make_random_password()},
             )
 
             tokens = get_tokens_for_user(user)
-            request.session["user_id"] = user.id
-            request.session["last_activity"] = str(now())
 
             return Response({
                 "message": "Google login successful",
@@ -181,44 +181,43 @@ class GoogleLoginView(APIView):
 
         except Exception as e:
             logger.error(f"Google login failed: {str(e)}")
-            return Response({"error": f"Google login failed: {str(e)}"},
+            return Response({"error": "Google login failed."},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # -----------------------
-# Profile (Protected)
+# Profile
 # -----------------------
 class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user
-        request.session["last_activity"] = str(now())
-        return Response({
-            "message": "Profile retrieved successfully",
-            "id": user.id,
-            "full_name": user.full_name,
-            "email": user.email,
-            "date_joined": user.date_joined,
-            "last_activity": request.session.get("last_activity"),
-        }, status=status.HTTP_200_OK)
+        """
+        Fetch current authenticated user profile.
+        """
+        serializer = UserProfileSerializer(request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request):
+        serializer = UserProfileSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # -----------------------
-# Session List (Protected)
+# Session List
 # -----------------------
 class SessionListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user_id = request.session.get("user_id")
-        last_activity = request.session.get("last_activity")
-
-        sessions = [{
-            "id": user_id,
-            "device": "Unknown",
-            "last_active": last_activity,
-        }]
-
-        return Response({"sessions": sessions}, status=status.HTTP_200_OK)
+        return Response({
+            "sessions": [{
+                "id": request.user.id,
+                "device": "Unknown",
+                "last_active": str(now()),
+            }]
+        }, status=status.HTTP_200_OK)
 
 # -----------------------
 # Forgot Password
@@ -239,7 +238,6 @@ class ForgotPasswordView(APIView):
 
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = token_generator.make_token(user)
-
         reset_link = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}/"
 
         try:
@@ -282,11 +280,9 @@ class ResetPasswordView(APIView):
 
         return Response({"message": "Password reset successful."}, status=status.HTTP_200_OK)
 
-
-# ====================================================
-# 🔹 Admin Views (New)
-# ====================================================
-
+# -----------------------
+# Admin Views
+# -----------------------
 class UserListView(APIView):
     permission_classes = [IsAdminUser]
 
@@ -296,7 +292,6 @@ class UserListView(APIView):
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
 class BlockUserView(APIView):
     permission_classes = [IsAdminUser]
 
@@ -304,15 +299,13 @@ class BlockUserView(APIView):
         try:
             user = CustomUser.objects.get(pk=user_id)
             if user.is_superuser:
-                return Response({"error": "You cannot block a superuser."},
-                                status=status.HTTP_403_FORBIDDEN)
-
+                return Response({"error": "You cannot block a superuser."}, status=status.HTTP_403_FORBIDDEN)
             user.is_active = False
             user.save()
-            return Response({"message": f"User {user.email} has been blocked."},
-                            status=status.HTTP_200_OK)
+            return Response({"message": f"User {user.email} has been blocked."}, status=status.HTTP_200_OK)
         except CustomUser.DoesNotExist:
             return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
 class UnblockUserView(APIView):
     permission_classes = [IsAdminUser]
 
@@ -321,7 +314,23 @@ class UnblockUserView(APIView):
             user = CustomUser.objects.get(pk=user_id)
             user.is_active = True
             user.save()
-            return Response({"message": f"User {user.email} has been unblocked."},
-                            status=status.HTTP_200_OK)
+            return Response({"message": f"User {user.email} has been unblocked."}, status=status.HTTP_200_OK)
         except CustomUser.DoesNotExist:
             return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+# -----------------------
+# KYC Profile
+# -----------------------
+class KYCProfileDetailView(generics.RetrieveUpdateAPIView):
+    serializer_class = KYCProfileSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        try:
+            return self.request.user.kyc
+        except KYCProfile.DoesNotExist:
+            return KYCProfile.objects.create(
+                user=self.request.user,
+                email=self.request.user.email,
+                full_name=self.request.user.full_name
+            )

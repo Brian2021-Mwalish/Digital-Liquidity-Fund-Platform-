@@ -2,6 +2,15 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.utils import timezone
+import uuid
+
+
+# -----------------------
+# Utility: Referral Code Generator
+# -----------------------
+def generate_referral_code():
+    """Generate a short unique referral code"""
+    return uuid.uuid4().hex[:12]
 
 
 # -----------------------
@@ -15,6 +24,11 @@ class CustomUserManager(BaseUserManager):
         email = self.normalize_email(email)
         user = self.model(email=email, full_name=full_name, **extra_fields)
         user.set_password(password)
+
+        # Ensure referral code is set
+        if not user.referral_code:
+            user.referral_code = generate_referral_code()
+
         user.save(using=self._db)
         return user
 
@@ -39,6 +53,17 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     date_joined = models.DateTimeField(default=timezone.now)
 
+    # Referral system
+    referral_code = models.CharField(max_length=12, unique=True, blank=True, null=True)
+    referred_by = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="referrals"
+    )
+    wallet_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
     # Admin flags
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -47,6 +72,15 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["full_name"]
+
+    def save(self, *args, **kwargs):
+        # Auto-generate referral code if missing
+        if not self.referral_code:
+            code = generate_referral_code()
+            while CustomUser.objects.filter(referral_code=code).exists():
+                code = generate_referral_code()
+            self.referral_code = code
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.email
@@ -72,3 +106,34 @@ class UserSession(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.session_key}"
+
+
+# -----------------------
+# KYC Profile
+# -----------------------
+class KYCProfile(models.Model):
+    user = models.OneToOneField(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name="kyc"
+    )
+    # Autofilled from registration, not editable here
+    email = models.EmailField(editable=False)
+    full_name = models.CharField(max_length=255, editable=False)
+    # Editable by user
+    id_number = models.CharField(max_length=50, blank=True, null=True)
+    date_of_birth = models.DateField(blank=True, null=True)
+    address = models.CharField(max_length=255, blank=True, null=True)
+    is_verified = models.BooleanField(default=False)
+    submitted_at = models.DateTimeField(default=timezone.now)
+
+    def save(self, *args, **kwargs):
+        # Autofill email and full_name from user on creation
+        if not self.email:
+            self.email = self.user.email
+        if not self.full_name:
+            self.full_name = self.user.full_name
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"KYC for {self.user.email}"

@@ -1,6 +1,8 @@
 # payments/models.py
 from django.db import models
 from django.utils import timezone
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from Users.models import CustomUser
 
 
@@ -21,7 +23,7 @@ class Wallet(models.Model):
 # -----------------------
 class Payment(models.Model):
     CURRENCY_CHOICES = [
-        ("KES", "Kenyan Shilling"),  
+        ("KES", "Kenyan Shilling"),
     ]
 
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="payments")
@@ -32,3 +34,18 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.amount_deducted} {self.currency}"
+
+
+# -----------------------
+# Signals → Auto-create Wallet when a user is created
+# -----------------------
+@receiver(post_save, sender=CustomUser)
+def create_user_wallet(sender, instance, created, **kwargs):
+    if created:
+        Wallet.objects.create(user=instance)
+
+
+@receiver(post_save, sender=CustomUser)
+def save_user_wallet(sender, instance, **kwargs):
+    if hasattr(instance, "wallet"):
+        instance.wallet.save()
