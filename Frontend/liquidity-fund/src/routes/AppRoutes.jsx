@@ -8,6 +8,7 @@ import About from "../pages/About";
 import Home from "../pages/Home";
 import NotFound from "../pages/NotFound";
 
+
 // Auth
 import Login from "../features/auth/Login";
 import Register from "../features/auth/Register";
@@ -40,7 +41,9 @@ class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       return (
         <div className="flex items-center justify-center h-full">
-          <p className="text-red-600 text-lg">Something went wrong. Please try again later.</p>
+          <p className="text-red-600 text-lg">
+            Something went wrong. Please try again later.
+          </p>
         </div>
       );
     }
@@ -74,16 +77,20 @@ const AppRoutes = () => {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
+        {/* Public Pages */}
         <Route path="/" element={<PageWrapper><LandingPage /></PageWrapper>} />
         <Route path="/about" element={<PageWrapper><About /></PageWrapper>} />
         <Route path="/home" element={<PageWrapper><Home /></PageWrapper>} />
+        
+
+        {/* Authentication */}
         <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
         <Route path="/register" element={<PageWrapper><Register /></PageWrapper>} />
         <Route path="/kyc" element={<PageWrapper><KYCForm /></PageWrapper>} />
         <Route path="/forgot-password" element={<PageWrapper><ForgotPassword /></PageWrapper>} />
         <Route path="/reset-password/:uid/:token" element={<PageWrapper><ResetPassword /></PageWrapper>} />
 
-        {/* Dashboard Routes */}
+        {/* Dashboards & Protected Routes */}
         <Route
           path="/client-dashboard"
           element={
@@ -92,10 +99,7 @@ const AppRoutes = () => {
             </RequireAuth>
           }
         />
-        <Route
-          path="/withdraw"
-          element={<PageWrapper><WithdrawalForm /></PageWrapper>}
-        />
+        <Route path="/withdraw" element={<PageWrapper><WithdrawalForm /></PageWrapper>} />
         <Route
           path="/admin-dashboard"
           element={
@@ -105,7 +109,7 @@ const AppRoutes = () => {
           }
         />
 
-        {/* 404 */}
+        {/* 404 Not Found */}
         <Route path="*" element={<PageWrapper><NotFound /></PageWrapper>} />
       </Routes>
     </AnimatePresence>

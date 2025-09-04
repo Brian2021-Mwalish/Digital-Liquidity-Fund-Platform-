@@ -245,7 +245,8 @@ const ClientDashboard = () => {
     { id: 'rent', label: 'Rent Currency' },
     { id: 'rentals', label: 'My Rentals' },
     { id: 'history', label: 'Payment History', link: '/home' },
-    { id: 'support', label: 'Support' }
+    { id: 'support', label: 'Support', link: '/contact' }
+
   ];
 
   const doubledMoney = activeRentals.reduce((sum, rental) => sum + (rental.expectedReturn || 0), 0);
