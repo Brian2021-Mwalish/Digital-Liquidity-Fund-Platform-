@@ -4,7 +4,8 @@ from django.urls import path, include
 from Users.views import (
     ProfileView,
     ReferralCodeView,
-    ReferralHistoryView
+    ReferralHistoryView,
+    KYCProfileDetailView,   # ✅ added
 )
 
 urlpatterns = [
@@ -22,6 +23,9 @@ urlpatterns = [
 
     # 🔹 Direct profile shortcut
     path("api/profile/", ProfileView.as_view(), name="profile-direct"),
+
+    # 🔹 Direct KYC shortcut (new)
+    path("api/kyc/", KYCProfileDetailView.as_view(), name="kyc-direct"),  # ✅ added
 
     # 🔹 Referrals shortcuts (Option 2)
     path("api/referrals/code/", ReferralCodeView.as_view(), name="referral-code-direct"),

@@ -15,8 +15,8 @@ from .views import (
     KYCProfileDetailView,
     ReferralListView,
     ReferralAdminView,
-    ReferralCodeView,       # ✅ add
-    ReferralHistoryView,    # ✅ add
+    ReferralCodeView,       # ✅ added
+    ReferralHistoryView,    # ✅ added
 )
 
 urlpatterns = [
@@ -40,7 +40,7 @@ urlpatterns = [
     path("users/<int:user_id>/unblock/", UnblockUserView.as_view(), name="unblock-user"),
 
     # KYC
-    path("kyc/", KYCProfileDetailView.as_view(), name="kyc-profile"),
+    path("kyc/", KYCProfileDetailView.as_view(), name="kyc-profile"),  # ✅ now available at /api/kyc/
 
     # Referrals
     path("referrals/", ReferralListView.as_view(), name="referral-list"),
