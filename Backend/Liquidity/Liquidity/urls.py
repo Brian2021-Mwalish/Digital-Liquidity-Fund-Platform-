@@ -7,11 +7,11 @@ urlpatterns = [
     # 🔹 Admin
     path("admin/", admin.site.urls),
 
-    # 🔹 Auth & User routes
-    path("api/auth/", include(("Users.urls", "users"), namespace="users")),  # matches your Users app
+    # 🔹 Auth & User routes (moved from /api/auth/ → /api/)
+    path("api/", include(("Users.urls", "users"), namespace="users")),
 
     # 🔹 Payments routes
-    path("api/payments/", include(("payment.urls", "payment"), namespace="payments")),
+    path("api/payments/", include(("payment.urls", "payment"), namespace="payment")),
 
     # 🔹 Withdrawals routes (updated to match frontend /api/withdraw/)
     path("api/withdraw/", include(("withdrawal.urls", "withdrawal"), namespace="withdrawal")),

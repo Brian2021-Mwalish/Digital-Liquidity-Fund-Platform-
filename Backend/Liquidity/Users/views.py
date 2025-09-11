@@ -1,7 +1,7 @@
 # users/views.py
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status, generics, permissions
+from rest_framework import status, generics
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from django.contrib.auth import authenticate, logout, get_user_model
 from django.utils.timezone import now
@@ -11,12 +11,13 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 
-from .models import CustomUser, KYCProfile
+from .models import CustomUser, KYCProfile, Referral
 from .serializers import KYCProfileSerializer, UserProfileSerializer
 
 import logging
 import requests
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.db.models import Count
 
 # -----------------------
 # Logger setup
@@ -47,6 +48,7 @@ class RegisterView(APIView):
         full_name = data.get("full_name")
         email = data.get("email")
         password = data.get("password")
+        referral_code = data.get("referral_code")  # ✅ optional referral code
 
         if not full_name or not email or not password:
             return Response({"error": "Full name, email, and password are required."},
@@ -60,6 +62,16 @@ class RegisterView(APIView):
             user = CustomUser.objects.create_user(
                 email=email, full_name=full_name, password=password
             )
+
+            # ✅ Handle referral
+            if referral_code:
+                try:
+                    referrer = CustomUser.objects.get(referral_code=referral_code)
+                    Referral.objects.create(referrer=referrer, referred=user)
+                    logger.info(f"Referral recorded: {referrer.email} referred {user.email}")
+                except CustomUser.DoesNotExist:
+                    logger.warning(f"Invalid referral code used: {referral_code}")
+
             tokens = get_tokens_for_user(user)
 
             return Response({
@@ -191,9 +203,6 @@ class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        """
-        Fetch current authenticated user profile.
-        """
         serializer = UserProfileSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -334,3 +343,87 @@ class KYCProfileDetailView(generics.RetrieveUpdateAPIView):
                 email=self.request.user.email,
                 full_name=self.request.user.full_name
             )
+# -----------------------
+# Referral Views
+# -----------------------
+class ReferralListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        referrals = Referral.objects.filter(referrer=request.user).select_related("referred")
+        data = [
+            {
+                "id": r.referred.id if r.referred else None,
+                "email": r.referred.email if r.referred else r.referred_email,
+                "full_name": r.referred.full_name if r.referred else None,
+                "date_joined": r.referred.date_joined if r.referred else r.created_at,
+            }
+            for r in referrals
+        ]
+        return Response({"referrals": data, "total": len(data)}, status=status.HTTP_200_OK)
+
+
+# -----------------------
+# Referral Code (for logged in user)
+# -----------------------
+class ReferralCodeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        return Response({
+            "referral_code": user.referral_code
+        })
+
+
+# -----------------------
+# Referral History (who this user referred)
+# -----------------------
+class ReferralHistoryView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        referred_users = user.referrals.all()  # ✅ related_name="referrals"
+        history = [
+            {
+                "email": u.email,
+                "full_name": u.full_name,
+                "date_joined": u.date_joined,
+            }
+            for u in referred_users
+        ]
+        return Response({"history": history})
+
+
+# -----------------------
+# Referral Admin (see who referred who + stats)
+# -----------------------
+class ReferralAdminView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        all_referrals = Referral.objects.select_related("referrer", "referred")
+        referral_data = [
+            {
+                "referrer_id": r.referrer.id if r.referrer else None,
+                "referrer_email": r.referrer.email if r.referrer else None,
+                "referred_id": r.referred.id if r.referred else None,
+                "referred_email": r.referred.email if r.referred else r.referred_email,
+                "date_referred": r.referred.date_joined if r.referred else r.created_at,
+            }
+            for r in all_referrals
+        ]
+
+        total_referrals = all_referrals.count()
+        top_referrers = (
+            Referral.objects.values("referrer__id", "referrer__email", "referrer__full_name")
+            .annotate(total=Count("id"))
+            .order_by("-total")[:10]
+        )
+
+        return Response({
+            "total_referrals": total_referrals,
+            "referral_relationships": referral_data,
+            "top_referrers": list(top_referrers),
+        }, status=status.HTTP_200_OK)

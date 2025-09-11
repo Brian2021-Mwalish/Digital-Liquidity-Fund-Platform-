@@ -87,12 +87,45 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
 
 # -----------------------
+# Referral Model
+# -----------------------
+class Referral(models.Model):
+    referrer = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name="referrer_history"
+    )
+    referred = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name="referred_account",
+        null=True,
+        blank=True
+    )
+    referred_email = models.EmailField()
+    referred_name = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    status = models.CharField(
+        max_length=20,
+        choices=[("pending", "Pending"), ("completed", "Completed")],
+        default="pending"
+    )
+    reward = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+
+    class Meta:
+        unique_together = ("referrer", "referred_email")
+
+    def __str__(self):
+        return f"{self.referrer.email} referred {self.referred_email}"
+
+
+# -----------------------
 # User Session Tracking
 # -----------------------
 class UserSession(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="sessions")
     session_key = models.CharField(max_length=255, unique=True)
-    device = models.CharField(max_length=255, blank=True, null=True)   # optional (e.g., "Chrome on Windows")
+    device = models.CharField(max_length=255, blank=True, null=True)   # e.g., "Chrome on Windows"
     ip_address = models.GenericIPAddressField(blank=True, null=True)
     login_time = models.DateTimeField(default=timezone.now)
     logout_time = models.DateTimeField(blank=True, null=True)
@@ -117,9 +150,10 @@ class KYCProfile(models.Model):
         on_delete=models.CASCADE,
         related_name="kyc"
     )
-    # Autofilled from registration, not editable here
+    # Autofilled from registration
     email = models.EmailField(editable=False)
     full_name = models.CharField(max_length=255, editable=False)
+
     # Editable by user
     id_number = models.CharField(max_length=50, blank=True, null=True)
     date_of_birth = models.DateField(blank=True, null=True)
