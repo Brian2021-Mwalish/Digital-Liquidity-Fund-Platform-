@@ -1,9 +1,7 @@
-# users/models.py
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.utils import timezone
 import uuid
-
 
 # -----------------------
 # Utility: Referral Code Generator
@@ -54,7 +52,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     date_joined = models.DateTimeField(default=timezone.now)
 
     # Referral system
-    referral_code = models.CharField(max_length=12, unique=True, blank=True, null=True)
+    referral_code = models.CharField(max_length=12, unique=True, blank=False, null=False, default=generate_referral_code)
     referred_by = models.ForeignKey(
         "self",
         null=True,
@@ -74,7 +72,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = ["full_name"]
 
     def save(self, *args, **kwargs):
-        # Auto-generate referral code if missing
+        # Auto-generate referral code if missing or blank
         if not self.referral_code:
             code = generate_referral_code()
             while CustomUser.objects.filter(referral_code=code).exists():
@@ -117,6 +115,12 @@ class Referral(models.Model):
 
     def __str__(self):
         return f"{self.referrer.email} referred {self.referred_email}"
+
+    def mark_completed(self, referred_user):
+        """Mark this referral as completed when the referred user registers"""
+        self.referred = referred_user
+        self.status = "completed"
+        self.save()
 
 
 # -----------------------
