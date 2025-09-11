@@ -244,6 +244,7 @@ const ClientDashboard = () => {
     { id: 'wallet', label: 'Wallet' },
     { id: 'rent', label: 'Rent Currency' },
     { id: 'rentals', label: 'My Rentals' },
+    { id: 'referrals', label: 'Referrals', link: '/referrals' },
     { id: 'history', label: 'Payment History', link: '/home' },
     { id: 'support', label: 'Support', link: '/contact' }
 
@@ -259,7 +260,7 @@ const ClientDashboard = () => {
             <h2 className="text-3xl font-bold text-gray-800">Wallet</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <StatCard title="Current Balance" value={`KES ${balance.toLocaleString()}`} bgColor="bg-green-50 border-green-200" />
-              <StatCard title="Doubled Money" value={`KES ${doubledMoney.toLocaleString()}`} subtitle="Money doubled from rentals" bgColor="bg-blue-50 border-blue-200" />
+              <StatCard title="Doubled Money" value={`KES ${doubledMoney.toLocaleString()}`} subtitle="Money doubled from rentals" bgColor="bg-emerald-50 border-emerald-200" />
             </div>
             <div className="mt-6">
               <Link 
@@ -278,14 +279,14 @@ const ClientDashboard = () => {
       case 'dashboard':
         return (
           <div className="space-y-6">
-            <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white p-6 rounded-xl shadow-lg">
+            <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 text-white p-6 rounded-xl shadow-lg">
               <h1 className="text-3xl font-bold">Welcome back{clientName ? `, ${clientName}` : ''}!</h1>
               <p className="mt-2">Current Balance: <span className="text-2xl font-bold">KES {balance.toLocaleString()}</span></p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <StatCard title="Active Rentals" value={activeRentals.length} subtitle="Currently earning" bgColor="bg-yellow-50 border-yellow-200" />
               <StatCard title="Total Earnings" value={`KES ${totalEarnings.toLocaleString()}`} subtitle="This month" bgColor="bg-green-50 border-green-200" />
-              <StatCard title="Pending Returns" value={`KES ${pendingReturns.toLocaleString()}`} subtitle="Expected returns" bgColor="bg-orange-50 border-orange-200" />
+              <StatCard title="Pending Returns" value={`KES ${pendingReturns.toLocaleString()}`} subtitle="Expected returns" bgColor="bg-emerald-50 border-emerald-200" />
             </div>
           </div>
         );
@@ -299,13 +300,13 @@ const ClientDashboard = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {currencies.map((currency, index) => {
-                const colors = ['bg-red-500', 'bg-blue-500', 'bg-purple-500', 'bg-orange-500', 'bg-indigo-500', 'bg-green-500'];
+                const colors = ['bg-green-500', 'bg-emerald-500', 'bg-teal-500', 'bg-green-600', 'bg-emerald-600', 'bg-teal-600'];
                 return (
                   <div key={currency.code} className="bg-white border border-gray-200 rounded-xl shadow-lg p-6 text-center hover:shadow-xl hover:scale-105 transition-all cursor-pointer" 
                        onClick={() => { setSelectedCurrency(currency); setShowPaymentModal(true); }}>
                     <div className="text-4xl mb-3 font-bold text-gray-800">{currency.code}</div>
                     <h3 className="text-lg font-semibold text-gray-700 mb-4">{currency.name}</h3>
-                    <div className="text-3xl font-bold text-indigo-600 mb-2">KES {currency.price}</div>
+                    <div className="text-3xl font-bold text-green-600 mb-2">KES {currency.price}</div>
                     <div className="text-sm text-gray-600 mb-4">
                       Return: <span className="text-green-600 font-semibold">KES {currency.price * 2}</span>
                     </div>
@@ -349,7 +350,7 @@ const ClientDashboard = () => {
               <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-12 text-center">
                 <h3 className="text-xl font-medium mb-2 text-gray-800">No Active Rentals</h3>
                 <p className="text-gray-600 mb-6">Start renting currencies to see them here</p>
-                <button onClick={() => setActiveTab('rent')} className="bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-all">
+                <button onClick={() => setActiveTab('rent')} className="bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-all">
                   Start Renting
                 </button>
               </div>
@@ -413,11 +414,11 @@ const ClientDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header with unique gradient */}
-      <header className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 border-b border-gray-800 shadow-2xl sticky top-0 z-40">
+      {/* Header with green gradient */}
+      <header className="bg-gradient-to-r from-green-900 via-emerald-900 to-teal-900 border-b border-gray-800 shadow-2xl sticky top-0 z-40">
         <div className="px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-r from-purple-400 to-pink-400 rounded-xl flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-emerald-400 rounded-xl flex items-center justify-center shadow-lg">
               <span className="text-white font-bold text-xl">RC</span>
             </div>
             <h1 className="text-2xl font-bold text-white">RentFlowCoin</h1>
@@ -482,7 +483,7 @@ const ClientDashboard = () => {
                   key={item.id} 
                   onClick={() => setActiveTab(item.id)}
                   className={`w-full text-left px-4 py-3 rounded-xl transition-all font-medium ${
-                    activeTab === item.id ? 'bg-indigo-600 text-white shadow-lg' : 'hover:bg-gray-100 text-gray-700'
+                    activeTab === item.id ? 'bg-green-600 text-white shadow-lg' : 'hover:bg-gray-100 text-gray-700'
                   }`}
                 >
                   {item.label}
@@ -508,11 +509,11 @@ const ClientDashboard = () => {
               </svg>
             </button>
             <h3 className="text-lg font-semibold mb-4 text-gray-800">
-              <span className="text-2xl font-bold text-indigo-600">{selectedCurrency?.code}</span> Rent {selectedCurrency?.name}
+              <span className="text-2xl font-bold text-green-600">{selectedCurrency?.code}</span> Rent {selectedCurrency?.name}
             </h3>
             <div className="space-y-4">
               <div className="text-center p-4 bg-gray-50 rounded-lg">
-                <div className="text-3xl font-bold text-indigo-600">KES {selectedCurrency?.price}</div>
+                <div className="text-3xl font-bold text-green-600">KES {selectedCurrency?.price}</div>
                 <div className="text-gray-600">Expected Return: <span className="text-green-600 font-medium">KES {selectedCurrency?.price * 2}</span></div>
               </div>
               <div>
@@ -522,14 +523,14 @@ const ClientDashboard = () => {
                   placeholder="07........" 
                   value={phoneNumber}
                   onChange={handlePhoneChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" 
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" 
                 />
                 {phoneError && <p className="text-red-500 text-xs mt-1">{phoneError}</p>}
                 <p className="text-xs text-gray-500 mt-1">Enter your 10-digit phone number starting with 0</p>
               </div>
               {paymentStatus && (
-                <div className="text-center p-3 bg-indigo-50 rounded-lg">
-                  {isLoading && <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600 mr-2"></div>}
+                <div className="text-center p-3 bg-green-50 rounded-lg">
+                  {isLoading && <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-green-600 mr-2"></div>}
                   <span className="text-sm text-gray-700">{paymentStatus}</span>
                 </div>
               )}

@@ -8,7 +8,6 @@ import About from "../pages/About";
 import Home from "../pages/Home";
 import NotFound from "../pages/NotFound";
 
-
 // Auth
 import Login from "../features/auth/Login";
 import Register from "../features/auth/Register";
@@ -20,6 +19,7 @@ import ResetPassword from "../features/auth/ResetPassword";
 import ClientDashboard from "../features/dashboard/ClientDashboard";
 import AdminDashboard from "../features/dashboard/AdminDashboard";
 import WithdrawalForm from "../features/transactions/Withdraw";
+import ReferralPage from "../features/referral/ReferralPage"; // ✅ Correct import
 import RequireAuth from "./RequireAuth";
 
 // Error Boundary
@@ -81,7 +81,6 @@ const AppRoutes = () => {
         <Route path="/" element={<PageWrapper><LandingPage /></PageWrapper>} />
         <Route path="/about" element={<PageWrapper><About /></PageWrapper>} />
         <Route path="/home" element={<PageWrapper><Home /></PageWrapper>} />
-        
 
         {/* Authentication */}
         <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
@@ -100,6 +99,17 @@ const AppRoutes = () => {
           }
         />
         <Route path="/withdraw" element={<PageWrapper><WithdrawalForm /></PageWrapper>} />
+
+        {/* ✅ Referral Page (Protected) */}
+        <Route
+          path="/referrals"
+          element={
+            <RequireAuth>
+              <PageWrapper><ReferralPage /></PageWrapper>
+            </RequireAuth>
+          }
+        />
+
         <Route
           path="/admin-dashboard"
           element={
