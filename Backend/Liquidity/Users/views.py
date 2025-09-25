@@ -240,14 +240,16 @@ class ForgotPasswordView(APIView):
             return Response({"error": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
+            user = CustomUser.objects.get(email=email)
+        except CustomUser.DoesNotExist:
             return Response({"error": "User with this email does not exist."},
                             status=status.HTTP_404_NOT_FOUND)
 
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = token_generator.make_token(user)
         reset_link = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}/"
+        logger.info(f"Password reset link generated for user {user.email}: {reset_link}")
+        print(f"Password reset link generated for user {user.email}: {reset_link}")
 
         try:
             send_mail(
@@ -268,6 +270,17 @@ class ForgotPasswordView(APIView):
 # Reset Password
 # -----------------------
 class ResetPasswordView(APIView):
+    def get(self, request, uidb64, token):
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = CustomUser.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
+            return Response({"error": "Invalid reset link."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not token_generator.check_token(user, token):
+            return Response({"error": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"message": "Token is valid."}, status=status.HTTP_200_OK)
     permission_classes = [AllowAny]
 
     def post(self, request, uidb64, token):
@@ -277,8 +290,8 @@ class ResetPasswordView(APIView):
 
         try:
             uid = force_str(urlsafe_base64_decode(uidb64))
-            user = User.objects.get(pk=uid)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            user = CustomUser.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
             return Response({"error": "Invalid reset link."}, status=status.HTTP_400_BAD_REQUEST)
 
         if not token_generator.check_token(user, token):

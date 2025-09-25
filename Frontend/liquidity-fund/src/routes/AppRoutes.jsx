@@ -87,7 +87,7 @@ const AppRoutes = () => {
         <Route path="/register" element={<PageWrapper><Register /></PageWrapper>} />
         <Route path="/kyc" element={<PageWrapper><KYCForm /></PageWrapper>} />
         <Route path="/forgot-password" element={<PageWrapper><ForgotPassword /></PageWrapper>} />
-        <Route path="/reset-password/:uid/:token" element={<PageWrapper><ResetPassword /></PageWrapper>} />
+          <Route path="/reset-password/:uidb64/:token" element={<PageWrapper><ResetPassword /></PageWrapper>} />
 
         {/* Dashboards & Protected Routes */}
         <Route
