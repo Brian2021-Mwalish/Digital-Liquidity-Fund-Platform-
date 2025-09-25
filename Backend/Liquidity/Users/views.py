@@ -405,16 +405,18 @@ class ReferralHistoryView(APIView):
 
     def get(self, request):
         user = request.user
-        referred_users = user.referrals.all()  # ✅ related_name="referrals"
+        referrals = Referral.objects.filter(referrer=user)
         history = [
             {
-                "email": u.email,
-                "full_name": u.full_name,
-                "date_joined": u.date_joined,
+                "referred_name": r.referred_name or (r.referred.full_name if r.referred else None),
+                "referred_email": r.referred_email,
+                "status": r.status,
+                "reward": r.reward,
+                "created_at": r.created_at,
             }
-            for u in referred_users
+            for r in referrals
         ]
-        return Response({"history": history})
+        return Response({"referrals": history})
 
 
 # -----------------------

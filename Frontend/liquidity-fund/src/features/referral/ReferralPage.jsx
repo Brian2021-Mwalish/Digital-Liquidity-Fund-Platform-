@@ -38,7 +38,7 @@ const ReferralPage = () => {
       });
       if (historyRes.ok) {
         const historyData = await historyRes.json();
-        setReferrals(historyData.referrals || historyData.history || []);
+        setReferrals(historyData.referrals || []);
       }
 
       // Fetch referrer info (who referred this user)
@@ -195,14 +195,21 @@ const ReferralPage = () => {
             </svg>
             Referral History
           </h2>
-          
+          {/* Show who referred you */}
+          {referrer && (
+            <div className="mb-6 text-green-700 font-medium">
+              <span>You were referred by: {referrer.full_name} ({referrer.email})</span>
+            </div>
+          )}
+          {/* Show who you referred */}
           {referrals.length > 0 ? (
             <div className="overflow-x-auto rounded-2xl border border-green-100">
               <table className="w-full">
                 <thead className="bg-gradient-to-r from-green-500 to-emerald-500 text-white">
                   <tr>
-                    <th className="p-4 text-left font-semibold">Friend</th>
-                    <th className="p-4 text-left font-semibold">Date Joined</th>
+                    <th className="p-4 text-left font-semibold">Referred User</th>
+                    <th className="p-4 text-left font-semibold">Email</th>
+                    <th className="p-4 text-left font-semibold">Date Referred</th>
                     <th className="p-4 text-center font-semibold">Status</th>
                     <th className="p-4 text-right font-semibold">Reward</th>
                   </tr>
@@ -212,6 +219,9 @@ const ReferralPage = () => {
                     <tr key={index} className="border-b border-green-100 hover:bg-green-50 transition-colors">
                       <td className="p-4 font-medium text-gray-800">
                         {ref.referred_name || "Anonymous User"}
+                      </td>
+                      <td className="p-4 text-gray-600">
+                        {ref.referred_email}
                       </td>
                       <td className="p-4 text-gray-600">
                         {new Date(ref.created_at).toLocaleDateString('en-US', {
