@@ -1,5 +1,14 @@
 import React from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, useLocation, useParams, useNavigate } from "react-router-dom";
+// Referral redirect component
+const ReferralRedirect = () => {
+  const { referral_code } = useParams();
+  const navigate = useNavigate();
+  React.useEffect(() => {
+    navigate(`/register?referral_code=${referral_code}`);
+  }, [referral_code, navigate]);
+  return null;
+};
 import { AnimatePresence, motion } from "framer-motion";
 
 // Pages
@@ -88,6 +97,8 @@ const AppRoutes = () => {
         <Route path="/kyc" element={<PageWrapper><KYCForm /></PageWrapper>} />
         <Route path="/forgot-password" element={<PageWrapper><ForgotPassword /></PageWrapper>} />
           <Route path="/reset-password/:uidb64/:token" element={<PageWrapper><ResetPassword /></PageWrapper>} />
+        {/* Referral link support: /referral/:referral_code redirects to /register?referral_code=... */}
+        <Route path="/referral/:referral_code" element={<ReferralRedirect />} />
 
         {/* Dashboards & Protected Routes */}
         <Route

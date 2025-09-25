@@ -63,11 +63,19 @@ class RegisterView(APIView):
                 email=email, full_name=full_name, password=password
             )
 
-            # ✅ Handle referral
+
+            # Handle referral code from registration
             if referral_code:
                 try:
                     referrer = CustomUser.objects.get(referral_code=referral_code)
-                    Referral.objects.create(referrer=referrer, referred=user)
+                    # Create referral if not exists for this email
+                    referral_obj, created = Referral.objects.get_or_create(
+                        referrer=referrer,
+                        referred_email=email,
+                        defaults={"referred_name": full_name}
+                    )
+                    # Mark referral as completed if user just registered
+                    referral_obj.mark_completed(user)
                     logger.info(f"Referral recorded: {referrer.email} referred {user.email}")
                 except CustomUser.DoesNotExist:
                     logger.warning(f"Invalid referral code used: {referral_code}")

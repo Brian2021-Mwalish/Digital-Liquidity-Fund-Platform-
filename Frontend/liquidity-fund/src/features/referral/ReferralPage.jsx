@@ -7,6 +7,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const ReferralPage = () => {
   const [referralCode, setReferralCode] = useState("");
   const [referrals, setReferrals] = useState([]);
+  const [referrer, setReferrer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const token = localStorage.getItem("access");
@@ -16,28 +17,42 @@ const ReferralPage = () => {
     try {
       setLoading(true);
 
+      // Fetch referral code
       const codeRes = await fetch(`${API_BASE_URL}/api/referrals/code/`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
-
       if (codeRes.ok) {
         const codeData = await codeRes.json();
         setReferralCode(codeData.referral_code);
       }
 
+      // Fetch referral history (who this user referred)
       const historyRes = await fetch(`${API_BASE_URL}/api/referrals/history/`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
-
       if (historyRes.ok) {
         const historyData = await historyRes.json();
-        setReferrals(historyData.referrals || []);
+        setReferrals(historyData.referrals || historyData.history || []);
+      }
+
+      // Fetch referrer info (who referred this user)
+      const refByRes = await fetch(`${API_BASE_URL}/api/users/profile/`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (refByRes.ok) {
+        const profileData = await refByRes.json();
+        if (profileData.referred_by) {
+          setReferrer(profileData.referred_by);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch referrals:", error);
@@ -52,7 +67,7 @@ const ReferralPage = () => {
 
   // Copy referral link
   const copyToClipboard = () => {
-    const link = `${window.location.origin}/signup?ref=${referralCode}`;
+  const link = `${window.location.origin}/referral/${referralCode}`;
     navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -75,6 +90,16 @@ const ReferralPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 p-6">
       <div className="max-w-5xl mx-auto space-y-6">
+        {/* Referrer Info */}
+        {referrer && (
+          <div className="bg-white border-2 border-green-200 rounded-3xl shadow-xl p-6 mb-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-2">You were referred by:</h2>
+            <div className="flex items-center gap-4">
+              <span className="font-semibold text-green-700">{referrer.full_name}</span>
+              <span className="text-gray-600">({referrer.email})</span>
+            </div>
+          </div>
+        )}
         {/* Header with Back Button */}
         <div className="flex items-center justify-between mb-6">
           <Link

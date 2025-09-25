@@ -35,6 +35,9 @@ const schema = yup.object().shape({
 
 const Register = () => {
   const navigate = useNavigate();
+  // Read referral_code from URL
+  const searchParams = new URLSearchParams(window.location.search);
+  const referralCode = searchParams.get("referral_code");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -81,6 +84,10 @@ const Register = () => {
     toast.loading("Creating your account, please wait...", { id: "register" });
 
     const { confirmPassword, ...payload } = formData;
+    // If referralCode exists, add to payload
+    if (referralCode) {
+      payload.referral_code = referralCode;
+    }
 
     try {
       const res = await fetch("http://localhost:8000/api/auth/register/", {
