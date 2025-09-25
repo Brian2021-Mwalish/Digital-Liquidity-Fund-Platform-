@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Search, Bell, ChevronDown, Menu, X, BarChart3, Users, Home, CreditCard,
@@ -5,7 +6,9 @@ import {
   CheckCircle, Eye, Filter, MoreHorizontal, DollarSign, Clock, Check, XCircle
 } from 'lucide-react';
 
+
 const AdminDashboard = () => {
+  // State and constants
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('overview');
   const [profileOpen, setProfileOpen] = useState(false);
@@ -25,9 +28,7 @@ const AdminDashboard = () => {
     { title: 'Pending KYC', value: '0', change: '-3%', positive: false },
     { title: 'Total Referrals', value: '0', change: '+0%', positive: true }
   ]);
-
   const API_BASE_URL = 'http://127.0.0.1:8000/api';
-
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: BarChart3, count: null },
     { id: 'users', label: 'Users', icon: Users, count: users.length },
@@ -41,12 +42,135 @@ const AdminDashboard = () => {
     { id: 'audit', label: 'Audit Logs', icon: Shield, count: null }
   ];
 
-  useEffect(() => {
-    fetchUsers();
-    fetchWithdrawals();
-    fetchReferrals();
-  }, []);
-  // Fetch all referrals for admin
+  // API and handler functions
+  const handleApiError = (error, operation) => {
+    console.error(`Error ${operation}:`, error);
+    if (error.message.includes('401') || error.message.includes('403')) {
+      alert('Session expired. Please login again.');
+      localStorage.removeItem("access");
+      window.location.href = '/login';
+    } else {
+      alert(`Failed to ${operation}. Please try again.`);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('access');
+      if (!token) {
+        window.location.href = '/login';
+        return;
+      }
+      const usersRes = await fetch(`${API_BASE_URL}/auth/users/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (usersRes.ok) {
+        const usersData = await usersRes.json();
+        const usersArray = Array.isArray(usersData) ? usersData : usersData.results || [];
+        setUsers(usersArray);
+        setStats(prev => prev.map(stat => 
+          stat.title === 'Total Users' 
+            ? { ...stat, value: usersArray.length.toString() }
+            : stat
+        ));
+      } else if (usersRes.status === 401 || usersRes.status === 403) {
+        localStorage.removeItem("access");
+        window.location.href = '/login';
+        return;
+      } else {
+        throw new Error(`Failed to fetch users: ${usersRes.status}`);
+      }
+      const profileRes = await fetch(`${API_BASE_URL}/auth/profile/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (profileRes.ok) {
+        const profileData = await profileRes.json();
+        setAdminData({
+          username: profileData.full_name || profileData.username || 'Admin',
+          email: profileData.email,
+          is_superuser: profileData.is_superuser || true
+        });
+      }
+    } catch (error) {
+      handleApiError(error, 'fetch users');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchWithdrawals = async () => {
+    try {
+      const token = localStorage.getItem('access');
+      if (!token) return;
+      const res = await fetch(`${API_BASE_URL}/withdrawals/withdraw/pending/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const allWithdrawalsRes = await fetch(`${API_BASE_URL}/withdrawals/withdraw/all/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        let allWithdrawals = data;
+        if (allWithdrawalsRes.ok) {
+          allWithdrawals = await allWithdrawalsRes.json();
+        }
+        const withdrawalsWithUser = await Promise.all(
+          allWithdrawals.map(async (withdrawal) => {
+            if (
+              withdrawal.user &&
+              (withdrawal.user.first_name || withdrawal.user.last_name || withdrawal.user.email || withdrawal.user.phone_number)
+            ) {
+              return withdrawal;
+            }
+            if (withdrawal.user && withdrawal.user.id) {
+              try {
+                const userRes = await fetch(`${API_BASE_URL}/auth/users/${withdrawal.user.id}/`, {
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                  }
+                });
+                if (userRes.ok) {
+                  const userData = await userRes.json();
+                  return { ...withdrawal, user: userData };
+                }
+              } catch (e) {}
+            }
+            return withdrawal;
+          })
+        );
+        setWithdrawals(withdrawalsWithUser);
+        setStats(prev => prev.map(stat => 
+          stat.title === 'Pending Withdrawals' 
+            ? { ...stat, value: withdrawalsWithUser.filter(w => w.status === 'pending').length.toString() }
+            : stat
+        ));
+      } else if (res.status === 401 || res.status === 403) {
+        localStorage.removeItem("access");
+        window.location.href = '/login';
+      } else if (res.status === 404) {
+        setWithdrawals([]);
+      } else {
+        throw new Error(`Failed to fetch withdrawals: ${res.status}`);
+      }
+    } catch (error) {
+      handleApiError(error, 'fetch withdrawals');
+    }
+  };
+
   const fetchReferrals = async () => {
     try {
       setLoading(true);
@@ -76,6 +200,134 @@ const AdminDashboard = () => {
       setLoading(false);
     }
   };
+
+  const handleBlockUser = async (userId, shouldBlock) => {
+    const action = shouldBlock ? 'block' : 'unblock';
+    if (!confirm(`Are you sure you want to ${action} this user?`)) return;
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('access');
+      if (!token) {
+        window.location.href = '/login';
+        return;
+      }
+      const endpoint = shouldBlock ? 'block' : 'unblock';
+      const res = await fetch(`${API_BASE_URL}/auth/users/${userId}/${endpoint}/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (res.ok) {
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            user.id === userId 
+              ? { ...user, is_active: !shouldBlock }
+              : user
+          )
+        );
+        alert(`User ${action}ed successfully`);
+      } else if (res.status === 401 || res.status === 403) {
+        localStorage.removeItem("access");
+        window.location.href = '/login';
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Failed to ${action} user: ${res.status}`);
+      }
+    } catch (error) {
+      handleApiError(error, `${action} user`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleWithdrawalAction = async (withdrawalId, action) => {
+    if (!confirm(`Are you sure you want to ${action} this withdrawal?`)) return;
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('access');
+      if (!token) {
+        window.location.href = '/login';
+        return;
+      }
+      const res = await fetch(`${API_BASE_URL}/withdrawals/withdraw/${action}/${withdrawalId}/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (res.ok) {
+        await fetchWithdrawals();
+        alert(`Withdrawal ${action}d successfully`);
+      } else if (res.status === 401 || res.status === 403) {
+        localStorage.removeItem("access");
+        window.location.href = '/login';
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Failed to ${action} withdrawal: ${res.status}`);
+      }
+    } catch (error) {
+      handleApiError(error, `${action} withdrawal`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAwardWallet = async (userId) => {
+    if (!window.confirm('Award Ksh50 to this user?')) return;
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('access');
+      const res = await fetch(`http://127.0.0.1:8000/api/auth/users/${userId}/award-wallet/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ amount: 50 })
+      });
+      if (res.ok) {
+        alert('Awarded Ksh50!');
+        fetchUsers();
+      } else {
+        alert('Failed to award wallet.');
+      }
+    } catch (e) {
+      alert('Error awarding wallet.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem('access');
+      if (token) {
+        await fetch(`${API_BASE_URL}/auth/logout/`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      localStorage.removeItem("access");
+      localStorage.removeItem("refresh");
+      setProfileOpen(false);
+      window.location.href = '/login';
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+    fetchWithdrawals();
+    fetchReferrals();
+  }, []);
   // Referrals Management Section
   const ReferralsManagement = () => (
     <div className="space-y-6">
@@ -141,257 +393,6 @@ const AdminDashboard = () => {
     }
   }, [users, withdrawals, searchTerm, filterStatus, activeSection]);
 
-  const handleApiError = (error, operation) => {
-    console.error(`Error ${operation}:`, error);
-    if (error.message.includes('401') || error.message.includes('403')) {
-      alert('Session expired. Please login again.');
-      localStorage.removeItem("access");
-      window.location.href = '/login';
-    } else {
-      alert(`Failed to ${operation}. Please try again.`);
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('access');
-      if (!token) {
-        window.location.href = '/login';
-        return;
-      }
-
-      // Fixed: Use correct users endpoint
-      const usersRes = await fetch(`${API_BASE_URL}/auth/users/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (usersRes.ok) {
-        const usersData = await usersRes.json();
-        const usersArray = Array.isArray(usersData) ? usersData : usersData.results || [];
-        setUsers(usersArray);
-        setStats(prev => prev.map(stat => 
-          stat.title === 'Total Users' 
-            ? { ...stat, value: usersArray.length.toString() }
-            : stat
-        ));
-      } else if (usersRes.status === 401 || usersRes.status === 403) {
-        localStorage.removeItem("access");
-        window.location.href = '/login';
-        return;
-      } else {
-        throw new Error(`Failed to fetch users: ${usersRes.status}`);
-      }
-
-      // Fetch admin profile
-      const profileRes = await fetch(`${API_BASE_URL}/auth/profile/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (profileRes.ok) {
-        const profileData = await profileRes.json();
-        setAdminData({
-          username: profileData.full_name || profileData.username || 'Admin',
-          email: profileData.email,
-          is_superuser: profileData.is_superuser || true
-        });
-      }
-    } catch (error) {
-      handleApiError(error, 'fetch users');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchWithdrawals = async () => {
-    try {
-      const token = localStorage.getItem('access');
-      if (!token) return;
-
-      // Fixed: Use correct withdrawals endpoint
-      const res = await fetch(`${API_BASE_URL}/withdrawals/withdraw/pending/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        // Also fetch approved and rejected withdrawals to show all
-        const allWithdrawalsRes = await fetch(`${API_BASE_URL}/withdrawals/withdraw/all/`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        let allWithdrawals = data; // Default to pending only
-        if (allWithdrawalsRes.ok) {
-          allWithdrawals = await allWithdrawalsRes.json();
-        }
-
-        // Ensure each withdrawal has a full user object
-        const withdrawalsWithUser = await Promise.all(
-          allWithdrawals.map(async (withdrawal) => {
-            if (
-              withdrawal.user &&
-              (withdrawal.user.first_name || withdrawal.user.last_name || withdrawal.user.email || withdrawal.user.phone_number)
-            ) {
-              return withdrawal;
-            }
-            // If user info is missing, fetch it
-            if (withdrawal.user && withdrawal.user.id) {
-              try {
-                const userRes = await fetch(`${API_BASE_URL}/auth/users/${withdrawal.user.id}/`, {
-                  headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                  }
-                });
-                if (userRes.ok) {
-                  const userData = await userRes.json();
-                  return { ...withdrawal, user: userData };
-                }
-              } catch (e) {
-                // fallback to withdrawal as is
-              }
-            }
-            return withdrawal;
-          })
-        );
-        setWithdrawals(withdrawalsWithUser);
-        setStats(prev => prev.map(stat => 
-          stat.title === 'Pending Withdrawals' 
-            ? { ...stat, value: withdrawalsWithUser.filter(w => w.status === 'pending').length.toString() }
-            : stat
-        ));
-      } else if (res.status === 401 || res.status === 403) {
-        localStorage.removeItem("access");
-        window.location.href = '/login';
-      } else if (res.status === 404) {
-        // If the endpoint doesn't exist, try alternative approach
-        console.warn('Pending withdrawals endpoint not found, trying alternative...');
-        // You could try a different endpoint or show empty state
-        setWithdrawals([]);
-      } else {
-        throw new Error(`Failed to fetch withdrawals: ${res.status}`);
-      }
-    } catch (error) {
-      handleApiError(error, 'fetch withdrawals');
-    }
-  };
-
-  const handleBlockUser = async (userId, shouldBlock) => {
-    const action = shouldBlock ? 'block' : 'unblock';
-    if (!confirm(`Are you sure you want to ${action} this user?`)) return;
-    
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('access');
-      if (!token) {
-        window.location.href = '/login';
-        return;
-      }
-
-      // Fixed: Use correct user block/unblock endpoint
-      const endpoint = shouldBlock ? 'block' : 'unblock';
-      const res = await fetch(`${API_BASE_URL}/auth/users/${userId}/${endpoint}/`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (res.ok) {
-        // Update the user in the local state
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
-            user.id === userId 
-              ? { ...user, is_active: !shouldBlock }
-              : user
-          )
-        );
-        alert(`User ${action}ed successfully`);
-      } else if (res.status === 401 || res.status === 403) {
-        localStorage.removeItem("access");
-        window.location.href = '/login';
-      } else {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.detail || `Failed to ${action} user: ${res.status}`);
-      }
-    } catch (error) {
-      handleApiError(error, `${action} user`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleWithdrawalAction = async (withdrawalId, action) => {
-    if (!confirm(`Are you sure you want to ${action} this withdrawal?`)) return;
-    
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('access');
-      if (!token) {
-        window.location.href = '/login';
-        return;
-      }
-
-      // Fixed: Use correct withdrawal action endpoints
-      const res = await fetch(`${API_BASE_URL}/withdrawals/withdraw/${action}/${withdrawalId}/`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (res.ok) {
-        await fetchWithdrawals();
-        alert(`Withdrawal ${action}d successfully`);
-      } else if (res.status === 401 || res.status === 403) {
-        localStorage.removeItem("access");
-        window.location.href = '/login';
-      } else {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.detail || `Failed to ${action} withdrawal: ${res.status}`);
-      }
-    } catch (error) {
-      handleApiError(error, `${action} withdrawal`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      const token = localStorage.getItem('access');
-      if (token) {
-        await fetch(`${API_BASE_URL}/auth/logout/`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      localStorage.removeItem("access");
-      localStorage.removeItem("refresh");
-      setProfileOpen(false);
-      window.location.href = '/login';
-    }
-  };
 
   const WithdrawalsManagement = () => (
     <div className="space-y-6">
@@ -660,194 +661,65 @@ const AdminDashboard = () => {
             <p className="text-green-600 text-lg">No users found</p>
           </div>
         )}
+
+
+        </div>
       </div>
-  // Admin awards Ksh50 to user wallet
-  const handleAwardWallet = async (userId) => {
-    if (!window.confirm('Award Ksh50 to this user?')) return;
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('access');
-      const res = await fetch(`http://127.0.0.1:8000/api/auth/users/${userId}/award-wallet/`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ amount: 50 })
-      });
-      if (res.ok) {
-        alert('Awarded Ksh50!');
-        fetchUsers();
-      } else {
-        alert('Failed to award wallet.');
-      }
-    } catch (e) {
-      alert('Error awarding wallet.');
-    } finally {
-      setLoading(false);
-    }
-  };
-    </div>
-  );
+    );
 
   return (
-    <div className="min-h-screen bg-green-50">
-      <header className="bg-green-700 text-white shadow-lg relative z-50 w-full">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center space-x-4">
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-white hover:bg-white/10 p-2 rounded-md md:hidden">
-              {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+    <div className="min-h-screen bg-green-50 flex">
+      {/* Sidebar */}
+      <aside className={`bg-white shadow-lg w-64 min-h-screen p-6 transition-all duration-300 ${sidebarOpen ? '' : 'hidden md:block'}`}>
+        <div className="flex items-center justify-between mb-8">
+          <span className="text-2xl font-bold text-green-700">Admin</span>
+          <button className="md:hidden" onClick={() => setSidebarOpen(false)}><X size={24} /></button>
+        </div>
+        <nav className="space-y-2">
+          {menuItems.map(item => (
+            <button
+              key={item.id}
+              className={`w-full flex items-center px-4 py-2 rounded-lg text-green-900 hover:bg-green-100 transition-colors font-medium ${activeSection === item.id ? 'bg-green-100' : ''}`}
+              onClick={() => setActiveSection(item.id)}
+            >
+              <item.icon size={20} className="mr-3" />
+              {item.label}
+              {item.count !== null && <span className="ml-auto text-xs bg-green-200 text-green-800 rounded-full px-2 py-0.5">{item.count}</span>}
             </button>
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
-                <Home size={16} className="text-white" />
-              </div>
-              <h1 className="text-xl font-bold hidden sm:block text-green-100">RentFlowCoin Admin</h1>
-            </div>
+          ))}
+        </nav>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 p-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-green-700">Admin Dashboard</h1>
+            <p className="text-green-600">Welcome, {adminData.username}</p>
           </div>
           <div className="flex items-center space-x-4">
-            <button className="text-white hover:bg-white/10 p-2 rounded-md relative">
-              <Bell size={20} />
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">3</span>
-            </button>
-            <div className="relative">
-              <div className="flex items-center space-x-2 cursor-pointer hover:bg-white/10 rounded-lg px-3 py-2 transition-colors" onClick={() => setProfileOpen(!profileOpen)}>
-                <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-semibold text-white">{adminData?.username?.[0] || 'A'}</span>
-                </div>
-                <div className="hidden sm:block text-left">
-                  <p className="text-sm font-medium text-white">{adminData?.username || 'Admin'}</p>
-                  <p className="text-xs text-green-100">{adminData?.email}</p>
-                </div>
-                <ChevronDown size={16} className="text-green-100" />
-              </div>
-              {profileOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl py-2 text-green-800 border border-green-200">
-                  <div className="px-4 py-3 border-b border-green-200">
-                    <p className="font-medium text-green-900">{adminData?.username}</p>
-                    <p className="text-sm text-green-600">{adminData?.email}</p>
-                    <span className="inline-flex items-center px-2 py-1 mt-2 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                      {adminData?.is_superuser ? 'Super Admin' : 'Admin'}
-                    </span>
-                  </div>
-                  <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2">
-                    <LogOut size={16} /><span>Logout</span>
-                  </button>
-                </div>
-              )}
-            </div>
+            <button className="bg-green-100 text-green-700 px-4 py-2 rounded-lg font-medium" onClick={handleLogout}><LogOut size={18} className="inline mr-2" />Logout</button>
           </div>
         </div>
-      </header>
 
-      <div className="flex w-full">
-        <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-green-900 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 md:block`}>
-          <div className="flex flex-col h-full pt-16 md:pt-0">
-            <nav className="flex-1 px-4 py-6 space-y-2">
-              {menuItems.map((item) => (
-                <button key={item.id} onClick={() => { setActiveSection(item.id); setSidebarOpen(false); setSearchTerm(''); setFilterStatus('all'); }}
-                        className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-all duration-200 ${
-                          activeSection === item.id ? 'bg-green-600 text-white shadow-lg' : 'text-green-100 hover:bg-green-800 hover:text-white'
-                        }`}>
-                  <div className="flex items-center space-x-3">
-                    <item.icon size={20} />
-                    <span className="font-medium">{item.label}</span>
-                  </div>
-                  {item.count !== null && <span className={`text-xs px-2 py-1 rounded-full ${activeSection === item.id ? 'bg-green-800 text-green-200' : 'bg-green-700 text-white'}`}>{item.count}</span>}
-                </button>
-              ))}
-            </nav>
+        {/* Section Content */}
+        {activeSection === 'overview' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+            {stats.map((stat, idx) => (
+              <div key={idx} className="bg-white rounded-xl shadow-md p-6 border border-green-200 flex flex-col items-start">
+                <span className="text-green-500 text-xs font-medium mb-2">{stat.title}</span>
+                <span className="text-2xl font-bold text-green-900">{stat.value}</span>
+                <span className={`mt-2 text-sm font-medium ${stat.positive ? 'text-green-600' : 'text-red-600'}`}>{stat.change}</span>
+              </div>
+            ))}
           </div>
-        </aside>
-
-        {sidebarOpen && <div className="fixed inset-0 z-30 bg-black bg-opacity-50 md:hidden" onClick={() => setSidebarOpen(false)} />}
-
-        <main className="flex-1 w-full md:w-auto">
-          <div className="p-4 lg:p-6">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-green-800 capitalize">{activeSection === 'kyc' ? 'KYC Verifications' : activeSection}</h2>
-              <p className="text-green-600 mt-1">Manage your {activeSection} and monitor platform performance</p>
-            </div>
-
-            {activeSection === 'users' ? <UsersManagement /> :
-             activeSection === 'withdrawals' ? <WithdrawalsManagement /> :
-             activeSection === 'referrals' ? <ReferralsManagement /> : (
-              <>
-                {activeSection === 'overview' && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 lg:gap-6 mb-6">
-                    {stats.map((stat, index) => (
-                      <div key={index} className="bg-white rounded-xl shadow-md p-6 border border-green-200 hover:shadow-lg transition-shadow">
-                        <h3 className="text-green-600 text-sm font-medium mb-2">{stat.title}</h3>
-                        <div className="flex items-end justify-between">
-                          <span className="text-2xl font-bold text-green-900">{stat.value}</span>
-                          <span className={`text-sm font-medium flex items-center ${stat.positive ? 'text-green-600' : 'text-red-600'}`}>
-                            {stat.positive ? '↗' : '↘'} {stat.change}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
-                  <div className="bg-white rounded-xl shadow-md p-6 border border-green-200">
-                    <h3 className="text-lg font-semibold text-green-900 mb-4">Recent Activity</h3>
-                    <div className="space-y-4">
-                      {[
-                        { type: 'user_registration', message: 'New user registration', time: '2 minutes ago' },
-                        { type: 'withdrawal_request', message: 'Withdrawal request submitted', time: '5 minutes ago' },
-                        { type: 'kyc_submission', message: 'KYC document submitted', time: '10 minutes ago' }
-                      ].map((activity, i) => (
-                        <div key={i} className="flex items-center space-x-3 p-3 rounded-lg bg-green-50 hover:bg-green-100 transition-colors">
-                          <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
-                            {activity.type === 'user_registration' && <Users size={16} className="text-white" />}
-                            {activity.type === 'withdrawal_request' && <DollarSign size={16} className="text-white" />}
-                            {activity.type === 'kyc_submission' && <FileCheck size={16} className="text-white" />}
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-green-900">{activity.message}</p>
-                            <p className="text-xs text-green-600">{activity.time}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="bg-white rounded-xl shadow-md p-6 border border-green-200">
-                    <h3 className="text-lg font-semibold text-green-900 mb-4">Quick Actions</h3>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button 
-                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={loading}
-                      >
-                        Approve KYC
-                      </button>
-                      <button 
-                        className="border border-green-300 hover:bg-green-50 text-green-700 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={loading}
-                      >
-                        Export Data
-                      </button>
-                      <button 
-                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={loading}
-                      >
-                        Block User
-                      </button>
-                      <button 
-                        className="border border-green-300 hover:bg-green-50 text-green-700 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={loading}
-                      >
-                        Send Alert
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </main>
-      </div>
+        )}
+        {activeSection === 'users' && <UsersManagement />}
+        {activeSection === 'withdrawals' && <WithdrawalsManagement />}
+        {activeSection === 'referrals' && <ReferralsManagement />}
+      </main>
     </div>
   );
-};
-
+}
 export default AdminDashboard;
