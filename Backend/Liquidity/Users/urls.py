@@ -17,6 +17,7 @@ from .views import (
     ReferralAdminView,
     ReferralCodeView,       # ✅ added
     ReferralHistoryView,    # ✅ added
+    admin_award_wallet,     # Admin wallet award endpoint
 )
 
 urlpatterns = [
@@ -38,6 +39,7 @@ urlpatterns = [
     path("users/", UserListView.as_view(), name="user-list"),
     path("users/<int:user_id>/block/", BlockUserView.as_view(), name="block-user"),
     path("users/<int:user_id>/unblock/", UnblockUserView.as_view(), name="unblock-user"),
+    path("users/<int:user_id>/award-wallet/", admin_award_wallet, name="admin-award-wallet"),  # Admin wallet award endpoint
 
     # KYC
     path("kyc/", KYCProfileDetailView.as_view(), name="kyc-profile"),  # ✅ now available at /api/kyc/

@@ -24,6 +24,7 @@ class UserSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "is_superuser",
+            "wallet_balance",
         ]
 
     def get_username(self, obj):
@@ -142,7 +143,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ["id", "email", "full_name", "phone_number", "kyc", "is_superuser"]
+        fields = ["id", "email", "full_name", "phone_number", "kyc", "is_superuser", "wallet_balance"]
 
     def get_kyc(self, obj):
         kyc = getattr(obj, "kyc", None)

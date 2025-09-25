@@ -68,17 +68,37 @@ class RegisterView(APIView):
             if referral_code:
                 try:
                     referrer = CustomUser.objects.get(referral_code=referral_code)
-                    # Create referral if not exists for this email
                     referral_obj, created = Referral.objects.get_or_create(
                         referrer=referrer,
                         referred_email=email,
                         defaults={"referred_name": full_name}
                     )
-                    # Mark referral as completed if user just registered
                     referral_obj.mark_completed(user)
-                    logger.info(f"Referral recorded: {referrer.email} referred {user.email}")
+                    # Award Ksh50 to referrer when referred user rents (simulate here for demo)
+                    referrer.wallet_balance += 50
+                    referrer.save()
+                    referral_obj.reward = 50
+                    referral_obj.save()
+                    logger.info(f"Referral recorded: {referrer.email} referred {user.email} and awarded Ksh50")
                 except CustomUser.DoesNotExist:
                     logger.warning(f"Invalid referral code used: {referral_code}")
+# -----------------------
+# Admin Wallet Update Endpoint
+# -----------------------
+from rest_framework.decorators import api_view, permission_classes
+
+@api_view(["POST"])
+@permission_classes([IsAdminUser])
+def admin_award_wallet(request):
+    user_id = request.data.get("user_id")
+    amount = request.data.get("amount", 50)
+    try:
+        user = CustomUser.objects.get(pk=user_id)
+        user.wallet_balance += float(amount)
+        user.save()
+        return Response({"message": f"Awarded Ksh{amount} to {user.email}", "wallet_balance": user.wallet_balance}, status=200)
+    except CustomUser.DoesNotExist:
+        return Response({"error": "User not found."}, status=404)
 
             tokens = get_tokens_for_user(user)
 

@@ -14,6 +14,7 @@ const AdminDashboard = () => {
   const [withdrawals, setWithdrawals] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [filteredWithdrawals, setFilteredWithdrawals] = useState([]);
+  const [referrals, setReferrals] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [loading, setLoading] = useState(false);
@@ -21,7 +22,8 @@ const AdminDashboard = () => {
     { title: 'Total Users', value: '0', change: '+12%', positive: true },
     { title: 'Pending Withdrawals', value: '0', change: '+5%', positive: true },
     { title: 'Monthly Revenue', value: '$0', change: '+18%', positive: true },
-    { title: 'Pending KYC', value: '0', change: '-3%', positive: false }
+    { title: 'Pending KYC', value: '0', change: '-3%', positive: false },
+    { title: 'Total Referrals', value: '0', change: '+0%', positive: true }
   ]);
 
   const API_BASE_URL = 'http://127.0.0.1:8000/api';
@@ -30,6 +32,7 @@ const AdminDashboard = () => {
     { id: 'overview', label: 'Overview', icon: BarChart3, count: null },
     { id: 'users', label: 'Users', icon: Users, count: users.length },
     { id: 'withdrawals', label: 'Withdrawals', icon: DollarSign, count: withdrawals.filter(w => w.status === 'pending').length },
+    { id: 'referrals', label: 'Referrals', icon: CheckCircle, count: referrals.length },
     { id: 'rentals', label: 'Rentals', icon: Home, count: 89 },
     { id: 'transactions', label: 'Transactions', icon: CreditCard, count: null },
     { id: 'kyc', label: 'KYC Verifications', icon: FileCheck, count: 12 },
@@ -41,7 +44,75 @@ const AdminDashboard = () => {
   useEffect(() => {
     fetchUsers();
     fetchWithdrawals();
+    fetchReferrals();
   }, []);
+  // Fetch all referrals for admin
+  const fetchReferrals = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('access');
+      if (!token) {
+        window.location.href = '/login';
+        return;
+      }
+      const res = await fetch(`${API_BASE_URL}/auth/referrals/admin/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReferrals(data.referral_relationships || []);
+        setStats(prev => prev.map(stat =>
+          stat.title === 'Total Referrals'
+            ? { ...stat, value: (data.total_referrals || 0).toString() }
+            : stat
+        ));
+      }
+    } catch (error) {
+      handleApiError(error, 'fetch referrals');
+    } finally {
+      setLoading(false);
+    }
+  };
+  // Referrals Management Section
+  const ReferralsManagement = () => (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+        <h2 className="text-xl font-bold text-green-700 mb-4">All Referral Records</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-green-50 border-b border-green-200">
+              <tr>
+                <th className="text-left py-4 px-6 font-medium text-green-900">Referrer</th>
+                <th className="text-left py-4 px-6 font-medium text-green-900">Referred User</th>
+                <th className="text-left py-4 px-6 font-medium text-green-900">Date</th>
+                <th className="text-left py-4 px-6 font-medium text-green-900">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-green-200">
+              {referrals.length === 0 && (
+                <tr><td colSpan={4} className="text-center py-8 text-green-600">No referral records found</td></tr>
+              )}
+              {referrals.map((ref, idx) => (
+                <tr key={idx} className="hover:bg-green-50 transition-colors">
+                  <td className="py-4 px-6">{ref.referrer_email || ref.referrer_full_name || 'Unknown'}</td>
+                  <td className="py-4 px-6">{ref.referred_email || ref.referred_full_name || 'Unknown'}</td>
+                  <td className="py-4 px-6">{ref.created_at ? new Date(ref.created_at).toLocaleDateString() : '-'}</td>
+                  <td className="py-4 px-6">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${ref.completed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                      {ref.completed ? 'Completed' : 'Pending'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
 
   useEffect(() => {
     let filtered = activeSection === 'withdrawals' ? withdrawals : users;
@@ -360,19 +431,17 @@ const AdminDashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {loading && (
           <div className="col-span-full flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
           </div>
         )}
         {filteredWithdrawals.length === 0 && !loading ? (
           <div className="col-span-full text-center py-12">
-            <DollarSign size={48} className="mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-600 text-lg">No withdrawals found</p>
+            <DollarSign size={48} className="mx-auto text-green-300 mb-4" />
+            <p className="text-green-600 text-lg">No withdrawals found</p>
           </div>
         ) : (
           filteredWithdrawals.map((withdrawal) => {
-            // Ensure we fetch real user details
             const user = withdrawal.user || {};
-            // Prefer full name, fallback to username, fallback to "Unknown User"
             const fullName = user.first_name && user.last_name
               ? `${user.first_name} ${user.last_name}`
               : user.first_name
@@ -382,17 +451,11 @@ const AdminDashboard = () => {
                   : user.username
                     ? user.username
                     : 'Unknown User';
-            // Prefer email, fallback to username, fallback to "No email"
-            const email = user.email
-              ? user.email
-              : user.username
-                ? user.username
-                : 'No email';
-            // Prefer phone number, fallback to "No mobile"
+            const email = user.email ? user.email : user.username ? user.username : 'No email';
             const phone = user.phone_number || 'No mobile';
 
             return (
-              <div key={withdrawal.id} className="bg-white rounded-xl shadow-md border border-gray-200 p-6 flex flex-col space-y-4">
+              <div key={withdrawal.id} className="bg-white rounded-xl shadow-md border border-green-200 p-6 flex flex-col space-y-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
                     <span className="text-white font-semibold text-lg">
@@ -400,17 +463,17 @@ const AdminDashboard = () => {
                     </span>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">{fullName}</p>
-                    <p className="text-sm text-gray-600">{email}</p>
-                    <p className="text-sm text-gray-600">{phone}</p>
+                    <p className="font-medium text-green-900">{fullName}</p>
+                    <p className="text-sm text-green-700">Mobile: {phone}</p>
+                    <p className="text-sm text-green-700">Email: {email}</p>
                   </div>
                 </div>
                 <div>
-                  <span className="text-gray-500 text-xs">Amount</span>
-                  <div className="text-xl font-bold text-gray-900">${withdrawal.amount}</div>
+                  <span className="text-green-500 text-xs">Amount</span>
+                  <div className="text-xl font-bold text-green-900">${withdrawal.amount}</div>
                 </div>
                 <div>
-                  <span className="text-gray-500 text-xs">Status</span>
+                  <span className="text-green-500 text-xs">Status</span>
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ml-2 ${
                     withdrawal.status === 'approved' ? 'bg-green-100 text-green-800' : 
                     withdrawal.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
@@ -421,8 +484,8 @@ const AdminDashboard = () => {
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-500 text-xs">Date</span>
-                  <div className="text-sm text-gray-700">{new Date(withdrawal.created_at).toLocaleDateString()}</div>
+                  <span className="text-green-500 text-xs">Date</span>
+                  <div className="text-sm text-green-700">{new Date(withdrawal.created_at).toLocaleDateString()}</div>
                 </div>
                 <div>
                   {withdrawal.status === 'pending' ? (
@@ -441,9 +504,16 @@ const AdminDashboard = () => {
                       >
                         Reject
                       </button>
+                      <button
+                        onClick={() => handleWithdrawalAction(withdrawal.id, 'paid')}
+                        disabled={loading}
+                        className="px-3 py-1 text-xs font-medium rounded-md bg-green-700 text-white hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Paid
+                      </button>
                     </div>
                   ) : (
-                    <span className="text-sm text-gray-500">No actions</span>
+                    <span className="text-sm text-green-500">No actions</span>
                   )}
                 </div>
               </div>
@@ -491,26 +561,27 @@ const AdminDashboard = () => {
       <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden relative">
         {loading && (
           <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
           </div>
         )}
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-green-50 border-b border-green-200">
               <tr>
-                <th className="text-left py-4 px-6 font-medium text-gray-900">User</th>
-                <th className="text-left py-4 px-6 font-medium text-gray-900">Email</th>
-                <th className="text-left py-4 px-6 font-medium text-gray-900">Status</th>
-                <th className="text-left py-4 px-6 font-medium text-gray-900">Joined</th>
-                <th className="text-left py-4 px-6 font-medium text-gray-900">Actions</th>
+                <th className="text-left py-4 px-6 font-medium text-green-900">User</th>
+                <th className="text-left py-4 px-6 font-medium text-green-900">Email</th>
+                <th className="text-left py-4 px-6 font-medium text-green-900">Wallet</th>
+                <th className="text-left py-4 px-6 font-medium text-green-900">Status</th>
+                <th className="text-left py-4 px-6 font-medium text-green-900">Joined</th>
+                <th className="text-left py-4 px-6 font-medium text-green-900">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-green-200">
               {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={user.id} className="hover:bg-green-50 transition-colors">
                   <td className="py-4 px-6">
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
+                      <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
                         <span className="text-white font-semibold text-sm">
                           {(
                             user.first_name?.[0] ||
@@ -521,7 +592,7 @@ const AdminDashboard = () => {
                         </span>
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">
+                        <p className="font-medium text-green-900">
                           {user.first_name && user.last_name
                             ? `${user.first_name} ${user.last_name}`
                             : user.first_name
@@ -532,11 +603,12 @@ const AdminDashboard = () => {
                                   ? user.username
                                   : 'Unknown User'}
                         </p>
-                        <p className="text-sm text-gray-600">@{user.username || 'unknown'}</p>
+                        <p className="text-sm text-green-700">@{user.username || 'unknown'}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="py-4 px-6 text-gray-900">{user.email}</td>
+                  <td className="py-4 px-6 text-green-900">{user.email}</td>
+                  <td className="py-4 px-6 text-green-900 font-bold">Ksh {user.wallet_balance}</td>
                   <td className="py-4 px-6">
                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                       user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
@@ -544,7 +616,7 @@ const AdminDashboard = () => {
                       {user.is_active ? <><CheckCircle size={12} className="mr-1" />Active</> : <><UserX size={12} className="mr-1" />Blocked</>}
                     </span>
                   </td>
-                  <td className="py-4 px-6 text-gray-600">{new Date(user.date_joined).toLocaleDateString()}</td>
+                  <td className="py-4 px-6 text-green-700">{new Date(user.date_joined).toLocaleDateString()}</td>
                   <td className="py-4 px-6">
                     <div className="flex items-center space-x-2">
                       <button
@@ -557,13 +629,20 @@ const AdminDashboard = () => {
                         {user.is_active ? 'Block' : 'Unblock'}
                       </button>
                       <button 
-                        className="p-1 text-gray-400 hover:text-gray-600 rounded-md disabled:opacity-50"
+                        className="p-1 text-green-400 hover:text-green-600 rounded-md disabled:opacity-50"
+                        disabled={loading}
+                        onClick={() => handleAwardWallet(user.id)}
+                      >
+                        Award 50
+                      </button>
+                      <button 
+                        className="p-1 text-green-400 hover:text-green-600 rounded-md disabled:opacity-50"
                         disabled={loading}
                       >
                         <Eye size={16} />
                       </button>
                       <button 
-                        className="p-1 text-gray-400 hover:text-gray-600 rounded-md disabled:opacity-50"
+                        className="p-1 text-green-400 hover:text-green-600 rounded-md disabled:opacity-50"
                         disabled={loading}
                       >
                         <MoreHorizontal size={16} />
@@ -577,27 +656,53 @@ const AdminDashboard = () => {
         </div>
         {filteredUsers.length === 0 && !loading && (
           <div className="text-center py-12">
-            <Users size={48} className="mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-600 text-lg">No users found</p>
+            <Users size={48} className="mx-auto text-green-300 mb-4" />
+            <p className="text-green-600 text-lg">No users found</p>
           </div>
         )}
       </div>
+  // Admin awards Ksh50 to user wallet
+  const handleAwardWallet = async (userId) => {
+    if (!window.confirm('Award Ksh50 to this user?')) return;
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('access');
+      const res = await fetch(`http://127.0.0.1:8000/api/auth/users/${userId}/award-wallet/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ amount: 50 })
+      });
+      if (res.ok) {
+        alert('Awarded Ksh50!');
+        fetchUsers();
+      } else {
+        alert('Failed to award wallet.');
+      }
+    } catch (e) {
+      alert('Error awarding wallet.');
+    } finally {
+      setLoading(false);
+    }
+  };
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-slate-800 text-white shadow-lg relative z-50 w-full">
+    <div className="min-h-screen bg-green-50">
+      <header className="bg-green-700 text-white shadow-lg relative z-50 w-full">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center space-x-4">
             <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-white hover:bg-white/10 p-2 rounded-md md:hidden">
               {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
                 <Home size={16} className="text-white" />
               </div>
-              <h1 className="text-xl font-bold hidden sm:block">RentFlowCoin Admin</h1>
+              <h1 className="text-xl font-bold hidden sm:block text-green-100">RentFlowCoin Admin</h1>
             </div>
           </div>
           <div className="flex items-center space-x-4">
@@ -607,21 +712,21 @@ const AdminDashboard = () => {
             </button>
             <div className="relative">
               <div className="flex items-center space-x-2 cursor-pointer hover:bg-white/10 rounded-lg px-3 py-2 transition-colors" onClick={() => setProfileOpen(!profileOpen)}>
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
                   <span className="text-sm font-semibold text-white">{adminData?.username?.[0] || 'A'}</span>
                 </div>
                 <div className="hidden sm:block text-left">
                   <p className="text-sm font-medium text-white">{adminData?.username || 'Admin'}</p>
-                  <p className="text-xs text-gray-300">{adminData?.email}</p>
+                  <p className="text-xs text-green-100">{adminData?.email}</p>
                 </div>
-                <ChevronDown size={16} className="text-gray-300" />
+                <ChevronDown size={16} className="text-green-100" />
               </div>
               {profileOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl py-2 text-gray-800 border border-gray-200">
-                  <div className="px-4 py-3 border-b border-gray-200">
-                    <p className="font-medium text-gray-900">{adminData?.username}</p>
-                    <p className="text-sm text-gray-600">{adminData?.email}</p>
-                    <span className="inline-flex items-center px-2 py-1 mt-2 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl py-2 text-green-800 border border-green-200">
+                  <div className="px-4 py-3 border-b border-green-200">
+                    <p className="font-medium text-green-900">{adminData?.username}</p>
+                    <p className="text-sm text-green-600">{adminData?.email}</p>
+                    <span className="inline-flex items-center px-2 py-1 mt-2 text-xs font-medium bg-green-100 text-green-800 rounded-full">
                       {adminData?.is_superuser ? 'Super Admin' : 'Admin'}
                     </span>
                   </div>
@@ -636,19 +741,19 @@ const AdminDashboard = () => {
       </header>
 
       <div className="flex w-full">
-        <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-slate-900 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 md:block`}>
+        <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-green-900 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 md:block`}>
           <div className="flex flex-col h-full pt-16 md:pt-0">
             <nav className="flex-1 px-4 py-6 space-y-2">
               {menuItems.map((item) => (
                 <button key={item.id} onClick={() => { setActiveSection(item.id); setSidebarOpen(false); setSearchTerm(''); setFilterStatus('all'); }}
                         className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-left transition-all duration-200 ${
-                          activeSection === item.id ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-300 hover:bg-slate-800 hover:text-white'
+                          activeSection === item.id ? 'bg-green-600 text-white shadow-lg' : 'text-green-100 hover:bg-green-800 hover:text-white'
                         }`}>
                   <div className="flex items-center space-x-3">
                     <item.icon size={20} />
                     <span className="font-medium">{item.label}</span>
                   </div>
-                  {item.count !== null && <span className={`text-xs px-2 py-1 rounded-full ${activeSection === item.id ? 'bg-blue-800 text-blue-200' : 'bg-slate-700 text-white'}`}>{item.count}</span>}
+                  {item.count !== null && <span className={`text-xs px-2 py-1 rounded-full ${activeSection === item.id ? 'bg-green-800 text-green-200' : 'bg-green-700 text-white'}`}>{item.count}</span>}
                 </button>
               ))}
             </nav>
@@ -660,20 +765,21 @@ const AdminDashboard = () => {
         <main className="flex-1 w-full md:w-auto">
           <div className="p-4 lg:p-6">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-800 capitalize">{activeSection === 'kyc' ? 'KYC Verifications' : activeSection}</h2>
-              <p className="text-gray-600 mt-1">Manage your {activeSection} and monitor platform performance</p>
+              <h2 className="text-2xl font-bold text-green-800 capitalize">{activeSection === 'kyc' ? 'KYC Verifications' : activeSection}</h2>
+              <p className="text-green-600 mt-1">Manage your {activeSection} and monitor platform performance</p>
             </div>
 
-            {activeSection === 'users' ? <UsersManagement /> : 
-             activeSection === 'withdrawals' ? <WithdrawalsManagement /> : (
+            {activeSection === 'users' ? <UsersManagement /> :
+             activeSection === 'withdrawals' ? <WithdrawalsManagement /> :
+             activeSection === 'referrals' ? <ReferralsManagement /> : (
               <>
                 {activeSection === 'overview' && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6 mb-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 lg:gap-6 mb-6">
                     {stats.map((stat, index) => (
-                      <div key={index} className="bg-white rounded-xl shadow-md p-6 border border-gray-200 hover:shadow-lg transition-shadow">
-                        <h3 className="text-gray-600 text-sm font-medium mb-2">{stat.title}</h3>
+                      <div key={index} className="bg-white rounded-xl shadow-md p-6 border border-green-200 hover:shadow-lg transition-shadow">
+                        <h3 className="text-green-600 text-sm font-medium mb-2">{stat.title}</h3>
                         <div className="flex items-end justify-between">
-                          <span className="text-2xl font-bold text-gray-900">{stat.value}</span>
+                          <span className="text-2xl font-bold text-green-900">{stat.value}</span>
                           <span className={`text-sm font-medium flex items-center ${stat.positive ? 'text-green-600' : 'text-red-600'}`}>
                             {stat.positive ? '↗' : '↘'} {stat.change}
                           </span>
@@ -683,39 +789,39 @@ const AdminDashboard = () => {
                   </div>
                 )}
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
-                  <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+                  <div className="bg-white rounded-xl shadow-md p-6 border border-green-200">
+                    <h3 className="text-lg font-semibold text-green-900 mb-4">Recent Activity</h3>
                     <div className="space-y-4">
                       {[
                         { type: 'user_registration', message: 'New user registration', time: '2 minutes ago' },
                         { type: 'withdrawal_request', message: 'Withdrawal request submitted', time: '5 minutes ago' },
                         { type: 'kyc_submission', message: 'KYC document submitted', time: '10 minutes ago' }
                       ].map((activity, i) => (
-                        <div key={i} className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                          <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                        <div key={i} className="flex items-center space-x-3 p-3 rounded-lg bg-green-50 hover:bg-green-100 transition-colors">
+                          <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
                             {activity.type === 'user_registration' && <Users size={16} className="text-white" />}
                             {activity.type === 'withdrawal_request' && <DollarSign size={16} className="text-white" />}
                             {activity.type === 'kyc_submission' && <FileCheck size={16} className="text-white" />}
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">{activity.message}</p>
-                            <p className="text-xs text-gray-600">{activity.time}</p>
+                            <p className="text-sm font-medium text-green-900">{activity.message}</p>
+                            <p className="text-xs text-green-600">{activity.time}</p>
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
-                  <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                  <div className="bg-white rounded-xl shadow-md p-6 border border-green-200">
+                    <h3 className="text-lg font-semibold text-green-900 mb-4">Quick Actions</h3>
                     <div className="grid grid-cols-2 gap-3">
                       <button 
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                         disabled={loading}
                       >
                         Approve KYC
                       </button>
                       <button 
-                        className="border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="border border-green-300 hover:bg-green-50 text-green-700 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         disabled={loading}
                       >
                         Export Data
@@ -727,7 +833,7 @@ const AdminDashboard = () => {
                         Block User
                       </button>
                       <button 
-                        className="border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="border border-green-300 hover:bg-green-50 text-green-700 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         disabled={loading}
                       >
                         Send Alert
