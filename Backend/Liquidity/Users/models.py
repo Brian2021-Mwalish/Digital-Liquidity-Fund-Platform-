@@ -149,29 +149,18 @@ class UserSession(models.Model):
 # KYC Profile
 # -----------------------
 class KYCProfile(models.Model):
-    user = models.OneToOneField(
-        CustomUser,
-        on_delete=models.CASCADE,
-        related_name="kyc"
-    )
-    # Autofilled from registration
-    email = models.EmailField(editable=False)
-    full_name = models.CharField(max_length=255, editable=False)
-
-    # Editable by user
-    id_number = models.CharField(max_length=50, blank=True, null=True)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    full_name = models.CharField(max_length=255)
+    email = models.EmailField()
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    national_id = models.CharField(max_length=50, blank=True, null=True)  # ✅ renamed
     date_of_birth = models.DateField(blank=True, null=True)
     address = models.CharField(max_length=255, blank=True, null=True)
+
+    # tracking fields
     is_verified = models.BooleanField(default=False)
     submitted_at = models.DateTimeField(default=timezone.now)
 
-    def save(self, *args, **kwargs):
-        # Autofill email and full_name from user on creation
-        if not self.email:
-            self.email = self.user.email
-        if not self.full_name:
-            self.full_name = self.user.full_name
-        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"KYC for {self.user.email}"
@@ -183,7 +172,6 @@ class KYCProfile(models.Model):
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
-from .models import KYCProfile  # Make sure this matches your model name
 
 class KYCListView(APIView):
     permission_classes = [IsAdminUser]
@@ -196,11 +184,11 @@ class KYCListView(APIView):
                 "user_id": kyc.user.id,
                 "full_name": kyc.full_name,
                 "email": kyc.email,
-                "mobile": kyc.user.phone_number,  # Correct: from related user
-                "national_id": kyc.id_number,     # Correct field name
+                "mobile": kyc.phone_number or kyc.user.phone_number,
+                "national_id": kyc.id_number,
                 "address": kyc.address,
-                "status": "verified" if kyc.is_verified else "pending",  # Boolean to string
-                "date_submitted": kyc.submitted_at,  # Correct field name
+                "status": "verified" if kyc.is_verified else "pending",
+                "date_submitted": kyc.submitted_at,
             }
             for kyc in kycs
         ]

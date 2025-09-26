@@ -1,7 +1,7 @@
 # users/admin.py
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, UserSession, Referral
+from .models import CustomUser, UserSession, Referral, KYCProfile
 
 
 # -----------------------
@@ -127,6 +127,28 @@ class UserSessionAdmin(admin.ModelAdmin):
     list_filter = ("is_active", "login_time", "logout_time")
     search_fields = ("user__email", "session_key", "device", "ip_address")
     ordering = ("-login_time",)
+
+
+# -----------------------
+# KYC Profile Admin
+# -----------------------
+@admin.register(KYCProfile)
+class KYCProfileAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'user',
+        'full_name',
+        'email',
+        'address',
+        'date_of_birth',
+        # Only include fields that exist in your model!
+    )
+    search_fields = (
+        'full_name',
+        'email',
+        'address',
+    )
+    # Remove list_filter and readonly_fields if those fields do not exist
 
 
 # -----------------------

@@ -356,14 +356,8 @@ class KYCProfileDetailView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_object(self):
-        try:
-            return self.request.user.kyc
-        except KYCProfile.DoesNotExist:
-            return KYCProfile.objects.create(
-                user=self.request.user,
-                email=self.request.user.email,
-                full_name=self.request.user.full_name
-            )
+        # If each user has one KYCProfile
+        return KYCProfile.objects.get(user=self.request.user)
 
 class KYCListView(APIView):
     permission_classes = [IsAdminUser]
@@ -499,3 +493,12 @@ def admin_award_wallet(request, user_id):
         return Response({"message": f"Wallet updated for {user.email}."}, status=200)
     except CustomUser.DoesNotExist:
         return Response({"error": "User not found."}, status=404)
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def kyc_forms_list(request):
+    admin_email = request.user.email
+    # Use KYCProfile instead of KYCForm if KYCForm does not exist
+    kyc_forms = KYCProfile.objects.exclude(email=admin_email)
+    serializer = KYCProfileSerializer(kyc_forms, many=True)
+    return Response({'kyc_forms': serializer.data})

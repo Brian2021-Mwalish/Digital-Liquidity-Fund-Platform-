@@ -130,9 +130,27 @@ class UserSessionSerializer(serializers.ModelSerializer):
 # KYC Profile Serializer
 # -----------------------
 class KYCProfileSerializer(serializers.ModelSerializer):
+    national_id = serializers.CharField(source="id_number")
+    status = serializers.SerializerMethodField()
+    date_submitted = serializers.DateTimeField(source="submitted_at", read_only=True)
+
     class Meta:
         model = KYCProfile
-        fields = ["id_number", "date_of_birth", "address", "is_verified", "submitted_at"]
+        fields = [
+            "id",
+            "user",
+            "full_name",
+            "email",
+            "phone_number",
+            "national_id",
+            "date_of_birth",
+            "address",
+            "status",
+            "date_submitted",
+        ]
+
+    def get_status(self, obj):
+        return "verified" if obj.is_verified else "pending"
 
 
 # -----------------------

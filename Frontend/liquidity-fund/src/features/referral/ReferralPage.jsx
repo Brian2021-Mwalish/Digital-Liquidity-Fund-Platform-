@@ -65,6 +65,11 @@ const ReferralPage = () => {
     if (token) fetchReferralData();
   }, [token]);
 
+  // Debug: Log referrals to ensure data is present
+  useEffect(() => {
+    console.log("Referral history data:", referrals);
+  }, [referrals]);
+
   // Copy referral link
   const copyToClipboard = () => {
   const link = `${window.location.origin}/referral/${referralCode}`;
@@ -202,7 +207,7 @@ const ReferralPage = () => {
             </div>
           )}
           {/* Show who you referred */}
-          {referrals.length > 0 ? (
+          {(Array.isArray(referrals) && referrals.length > 0) ? (
             <div className="overflow-x-auto rounded-2xl border border-green-100">
               <table className="w-full">
                 <thead className="bg-gradient-to-r from-green-500 to-emerald-500 text-white">
@@ -219,13 +224,13 @@ const ReferralPage = () => {
                   {referrals.map((ref, index) => (
                     <tr key={index} className="border-b border-green-100 hover:bg-green-50 transition-colors">
                       <td className="p-4 font-medium text-gray-800">
-                        {ref.referred_name || ref.full_name || "Anonymous User"}
+                        {ref.referred_name || ref.full_name || ref.username || ref.name || "Anonymous User"}
                       </td>
                       <td className="p-4 text-gray-600">
-                        {ref.referred_email || ref.email || ""}
+                        {ref.referred_email || ref.email || ref.user_email || ""}
                       </td>
                       <td className="p-4 text-gray-600">
-                        {ref.mobile || ref.phone || "N/A"}
+                        {ref.mobile || ref.phone || ref.user_mobile || "N/A"}
                       </td>
                       <td className="p-4 text-gray-600">
                         {ref.created_at
