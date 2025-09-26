@@ -209,6 +209,7 @@ const ReferralPage = () => {
                   <tr>
                     <th className="p-4 text-left font-semibold">Referred User</th>
                     <th className="p-4 text-left font-semibold">Email</th>
+                    <th className="p-4 text-left font-semibold">Mobile</th>
                     <th className="p-4 text-left font-semibold">Date Referred</th>
                     <th className="p-4 text-center font-semibold">Status</th>
                     <th className="p-4 text-right font-semibold">Reward</th>
@@ -218,17 +219,28 @@ const ReferralPage = () => {
                   {referrals.map((ref, index) => (
                     <tr key={index} className="border-b border-green-100 hover:bg-green-50 transition-colors">
                       <td className="p-4 font-medium text-gray-800">
-                        {ref.referred_name || "Anonymous User"}
+                        {ref.referred_name || ref.full_name || "Anonymous User"}
                       </td>
                       <td className="p-4 text-gray-600">
-                        {ref.referred_email}
+                        {ref.referred_email || ref.email || ""}
                       </td>
                       <td className="p-4 text-gray-600">
-                        {new Date(ref.created_at).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        })}
+                        {ref.mobile || ref.phone || "N/A"}
+                      </td>
+                      <td className="p-4 text-gray-600">
+                        {ref.created_at
+                          ? new Date(ref.created_at).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric'
+                            })
+                          : ref.date_joined
+                            ? new Date(ref.date_joined).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })
+                            : "N/A"}
                       </td>
                       <td className="p-4 text-center">
                         <span
@@ -238,7 +250,7 @@ const ReferralPage = () => {
                               : "bg-amber-100 text-amber-800 border border-amber-200"
                           }`}
                         >
-                          {ref.status}
+                          {ref.status || "pending"}
                         </span>
                       </td>
                       <td className="p-4 text-right">

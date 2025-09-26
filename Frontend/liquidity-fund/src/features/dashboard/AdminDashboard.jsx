@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   Search, Bell, ChevronDown, Menu, X, BarChart3, Users, Home, CreditCard,
@@ -28,6 +27,8 @@ const AdminDashboard = () => {
     { title: 'Pending KYC', value: '0', change: '-3%', positive: false },
     { title: 'Total Referrals', value: '0', change: '+0%', positive: true }
   ]);
+  const [kycForms, setKycForms] = useState([]);
+  const [kycLoading, setKycLoading] = useState(true);
   const API_BASE_URL = 'http://127.0.0.1:8000/api';
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: BarChart3, count: null },
@@ -201,6 +202,37 @@ const AdminDashboard = () => {
     }
   };
 
+  // Fetch KYC forms for admin verification
+  const fetchKycForms = async () => {
+    setKycLoading(true);
+    const token = localStorage.getItem("access");
+    const res = await fetch(`${API_BASE_URL}/auth/kyc/all/`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setKycForms(data.kyc_forms || []);
+    }
+    setKycLoading(false);
+  };
+
+  // Verify KYC form
+  const handleVerifyKyc = async (kycId) => {
+    const token = localStorage.getItem("access");
+    const res = await fetch(`${API_BASE_URL}/auth/kyc/${kycId}/verify/`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (res.ok) {
+      setKycForms(forms =>
+        forms.map(f => f.id === kycId ? { ...f, status: "verified" } : f)
+      );
+      alert("KYC verified!");
+    } else {
+      alert("Failed to verify KYC.");
+    }
+  };
+
   const handleBlockUser = async (userId, shouldBlock) => {
     const action = shouldBlock ? 'block' : 'unblock';
     if (!confirm(`Are you sure you want to ${action} this user?`)) return;
@@ -327,6 +359,7 @@ const AdminDashboard = () => {
     fetchUsers();
     fetchWithdrawals();
     fetchReferrals();
+    fetchKycForms();
   }, []);
   // Referrals Management Section
   const ReferralsManagement = () => (
@@ -667,6 +700,75 @@ const AdminDashboard = () => {
       </div>
     );
 
+  // KYC Management Section
+  const KycManagement = () => (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-green-700 mb-6">KYC Verification</h2>
+      {kycLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-600"></div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {kycForms.length === 0 && (
+            <div className="col-span-full text-center py-12">
+              <Shield size={48} className="mx-auto text-green-300 mb-4" />
+              <p className="text-green-600 text-lg">No KYC forms found</p>
+            </div>
+          )}
+          {kycForms.map(form => (
+            <div
+              key={form.id}
+              className="bg-gradient-to-br from-green-100 via-emerald-50 to-teal-100 rounded-2xl shadow-lg border border-green-200 p-6 flex flex-col space-y-4"
+            >
+              <div className="flex items-center space-x-3 mb-2">
+                <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
+                  <span className="text-white font-semibold text-lg">
+                    {(form.full_name?.[0] || 'U').toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <p className="font-bold text-green-900 text-lg">{form.full_name}</p>
+                  <p className="text-sm text-green-700">{form.email}</p>
+                  <p className="text-sm text-green-700">Mobile: {form.mobile}</p>
+                </div>
+              </div>
+              <div className="flex flex-col space-y-1">
+                <span className="text-green-500 text-xs">National ID</span>
+                <span className="font-medium text-green-800">{form.national_id}</span>
+              </div>
+              <div className="flex flex-col space-y-1">
+                <span className="text-green-500 text-xs">Address</span>
+                <span className="font-medium text-green-800">{form.address}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
+                  form.status === "verified"
+                    ? "bg-green-100 text-green-800 border border-green-200"
+                    : "bg-yellow-100 text-yellow-800 border border-yellow-200"
+                }`}>
+                  {form.status === "verified" ? <CheckCircle size={14} className="mr-1" /> : <Shield size={14} className="mr-1" />}
+                  {form.status}
+                </span>
+                <span className="text-xs text-green-700 ml-2">
+                  {form.date_submitted ? new Date(form.date_submitted).toLocaleDateString() : ""}
+                </span>
+              </div>
+              {form.status !== "verified" && (
+                <button
+                  className="mt-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-lg font-bold shadow hover:from-green-600 hover:to-emerald-600 transition"
+                  onClick={() => handleVerifyKyc(form.id)}
+                >
+                  Verify
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-green-50 flex">
       {/* Sidebar */}
@@ -718,8 +820,10 @@ const AdminDashboard = () => {
         {activeSection === 'users' && <UsersManagement />}
         {activeSection === 'withdrawals' && <WithdrawalsManagement />}
         {activeSection === 'referrals' && <ReferralsManagement />}
+        {activeSection === 'kyc' && <KycManagement />}
       </main>
     </div>
   );
-}
+};
+
 export default AdminDashboard;

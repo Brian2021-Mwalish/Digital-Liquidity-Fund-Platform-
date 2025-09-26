@@ -68,37 +68,17 @@ class RegisterView(APIView):
             if referral_code:
                 try:
                     referrer = CustomUser.objects.get(referral_code=referral_code)
+                    # Create referral if not exists for this email
                     referral_obj, created = Referral.objects.get_or_create(
                         referrer=referrer,
                         referred_email=email,
                         defaults={"referred_name": full_name}
                     )
+                    # Mark referral as completed if user just registered
                     referral_obj.mark_completed(user)
-                    # Award Ksh50 to referrer when referred user rents (simulate here for demo)
-                    referrer.wallet_balance += 50
-                    referrer.save()
-                    referral_obj.reward = 50
-                    referral_obj.save()
-                    logger.info(f"Referral recorded: {referrer.email} referred {user.email} and awarded Ksh50")
+                    logger.info(f"Referral recorded: {referrer.email} referred {user.email}")
                 except CustomUser.DoesNotExist:
                     logger.warning(f"Invalid referral code used: {referral_code}")
-# -----------------------
-# Admin Wallet Update Endpoint
-# -----------------------
-from rest_framework.decorators import api_view, permission_classes
-
-@api_view(["POST"])
-@permission_classes([IsAdminUser])
-def admin_award_wallet(request):
-    user_id = request.data.get("user_id")
-    amount = request.data.get("amount", 50)
-    try:
-        user = CustomUser.objects.get(pk=user_id)
-        user.wallet_balance += float(amount)
-        user.save()
-        return Response({"message": f"Awarded Ksh{amount} to {user.email}", "wallet_balance": user.wallet_balance}, status=200)
-    except CustomUser.DoesNotExist:
-        return Response({"error": "User not found."}, status=404)
 
             tokens = get_tokens_for_user(user)
 
@@ -384,6 +364,40 @@ class KYCProfileDetailView(generics.RetrieveUpdateAPIView):
                 email=self.request.user.email,
                 full_name=self.request.user.full_name
             )
+
+class KYCListView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        kycs = KYCProfile.objects.select_related("user").all()
+        data = [
+            {
+                "id": kyc.id,
+                "user_id": kyc.user.id,
+                "full_name": kyc.full_name,
+                "email": kyc.email,
+                "mobile": kyc.mobile,
+                "national_id": kyc.national_id,
+                "address": kyc.address,
+                "status": kyc.status,
+                "date_submitted": kyc.created_at,
+            }
+            for kyc in kycs
+        ]
+        return Response({"kyc_forms": data}, status=status.HTTP_200_OK)
+
+class KYCVerifyView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, kyc_id):
+        try:
+            kyc = KYCProfile.objects.get(pk=kyc_id)
+            kyc.status = "verified"
+            kyc.save()
+            return Response({"message": "KYC verified."}, status=status.HTTP_200_OK)
+        except KYCProfile.DoesNotExist:
+            return Response({"error": "KYC not found."}, status=status.HTTP_404_NOT_FOUND)
+
 # -----------------------
 # Referral Views
 # -----------------------
@@ -425,18 +439,16 @@ class ReferralHistoryView(APIView):
 
     def get(self, request):
         user = request.user
-        referrals = Referral.objects.filter(referrer=user)
+        referred_users = user.referrals.all()  # related_name="referrals"
         history = [
             {
-                "referred_name": r.referred_name or (r.referred.full_name if r.referred else None),
-                "referred_email": r.referred_email,
-                "status": r.status,
-                "reward": r.reward,
-                "created_at": r.created_at,
+                "email": u.email,
+                "full_name": u.full_name,
+                "date_joined": u.date_joined,
             }
-            for r in referrals
+            for u in referred_users
         ]
-        return Response({"referrals": history})
+        return Response({"history": history})
 
 
 # -----------------------
@@ -453,7 +465,7 @@ class ReferralAdminView(APIView):
                 "referrer_email": r.referrer.email if r.referrer else None,
                 "referred_id": r.referred.id if r.referred else None,
                 "referred_email": r.referred.email if r.referred else r.referred_email,
-                "date_referred": r.referred.date_joined if r.referred else r.created_at,
+                "date_referred": r.created_at,  # <-- always use referral creation date
             }
             for r in all_referrals
         ]
@@ -470,3 +482,20 @@ class ReferralAdminView(APIView):
             "referral_relationships": referral_data,
             "top_referrers": list(top_referrers),
         }, status=status.HTTP_200_OK)
+
+# Add this to views.py if you want the endpoint
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAdminUser
+from rest_framework.response import Response
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def admin_award_wallet(request, user_id):
+    amount = request.data.get('amount', 0)
+    try:
+        user = CustomUser.objects.get(pk=user_id)
+        user.wallet += float(amount)
+        user.save()
+        return Response({"message": f"Wallet updated for {user.email}."}, status=200)
+    except CustomUser.DoesNotExist:
+        return Response({"error": "User not found."}, status=404)

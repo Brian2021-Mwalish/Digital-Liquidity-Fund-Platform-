@@ -175,3 +175,33 @@ class KYCProfile(models.Model):
 
     def __str__(self):
         return f"KYC for {self.user.email}"
+
+
+# -----------------------
+# Views
+# -----------------------
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAdminUser
+from .models import KYCProfile  # Make sure this matches your model name
+
+class KYCListView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        kycs = KYCProfile.objects.select_related("user").all()
+        data = [
+            {
+                "id": kyc.id,
+                "user_id": kyc.user.id,
+                "full_name": kyc.full_name,
+                "email": kyc.email,
+                "mobile": kyc.user.phone_number,  # Correct: from related user
+                "national_id": kyc.id_number,     # Correct field name
+                "address": kyc.address,
+                "status": "verified" if kyc.is_verified else "pending",  # Boolean to string
+                "date_submitted": kyc.submitted_at,  # Correct field name
+            }
+            for kyc in kycs
+        ]
+        return Response({"kyc_forms": data})
