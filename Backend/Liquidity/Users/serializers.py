@@ -11,6 +11,7 @@ class UserSerializer(serializers.ModelSerializer):
     username = serializers.SerializerMethodField()
     first_name = serializers.SerializerMethodField()
     last_name = serializers.SerializerMethodField()
+    wallet_balance = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomUser
@@ -47,6 +48,12 @@ class UserSerializer(serializers.ModelSerializer):
         if full_name and len(full_name.split(" ")) > 1:
             return " ".join(full_name.split(" ")[1:])
         return ""
+
+    def get_wallet_balance(self, obj):
+        try:
+            return obj.wallet.balance
+        except:
+            return 0.00
 
 
 # -----------------------
@@ -130,7 +137,7 @@ class UserSessionSerializer(serializers.ModelSerializer):
 # KYC Profile Serializer
 # -----------------------
 class KYCProfileSerializer(serializers.ModelSerializer):
-    national_id = serializers.CharField(source="id_number")
+    national_id = serializers.CharField(source="national_id")
     status = serializers.SerializerMethodField()
     date_submitted = serializers.DateTimeField(source="submitted_at", read_only=True)
 

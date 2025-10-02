@@ -185,7 +185,7 @@ class KYCListView(APIView):
                 "full_name": kyc.full_name,
                 "email": kyc.email,
                 "mobile": kyc.phone_number or kyc.user.phone_number,
-                "national_id": kyc.id_number,
+                "national_id": kyc.national_id,
                 "address": kyc.address,
                 "status": "verified" if kyc.is_verified else "pending",
                 "date_submitted": kyc.submitted_at,

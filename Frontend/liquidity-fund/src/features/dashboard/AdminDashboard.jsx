@@ -4,6 +4,7 @@ import {
   FileCheck, MessageSquare, Settings, Shield, Activity, LogOut, UserX,
   CheckCircle, Eye, Filter, MoreHorizontal, DollarSign, Clock, Check, XCircle
 } from 'lucide-react';
+import { apiFetch } from '../../lib/api';
 
 
 const AdminDashboard = () => {
@@ -23,6 +24,8 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState([
     { title: 'Total Users', value: '0', change: '+12%', positive: true },
     { title: 'Pending Withdrawals', value: '0', change: '+5%', positive: true },
+    { title: 'Total Withdrawals', value: '0', change: '+0%', positive: true },
+    { title: 'Total Wallet Balance', value: 'Ksh 0', change: '+10%', positive: true },
     { title: 'Monthly Revenue', value: '$0', change: '+18%', positive: true },
     { title: 'Pending KYC', value: '0', change: '-3%', positive: false },
     { title: 'Total Referrals', value: '0', change: '+0%', positive: true }
@@ -63,19 +66,17 @@ const AdminDashboard = () => {
         window.location.href = '/login';
         return;
       }
-      const usersRes = await fetch(`${API_BASE_URL}/auth/users/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const usersRes = await apiFetch(`${API_BASE_URL}/auth/users/`);
       if (usersRes.ok) {
         const usersData = await usersRes.json();
         const usersArray = Array.isArray(usersData) ? usersData : usersData.results || [];
         setUsers(usersArray);
-        setStats(prev => prev.map(stat => 
-          stat.title === 'Total Users' 
+        const totalWalletBalance = usersArray.reduce((sum, user) => sum + parseFloat(user.wallet_balance || 0), 0);
+        setStats(prev => prev.map(stat =>
+          stat.title === 'Total Users'
             ? { ...stat, value: usersArray.length.toString() }
+            : stat.title === 'Total Wallet Balance'
+            ? { ...stat, value: `Ksh ${totalWalletBalance.toFixed(2)}` }
             : stat
         ));
       } else if (usersRes.status === 401 || usersRes.status === 403) {
@@ -85,12 +86,7 @@ const AdminDashboard = () => {
       } else {
         throw new Error(`Failed to fetch users: ${usersRes.status}`);
       }
-      const profileRes = await fetch(`${API_BASE_URL}/auth/profile/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const profileRes = await apiFetch(`${API_BASE_URL}/auth/profile/`);
       if (profileRes.ok) {
         const profileData = await profileRes.json();
         setAdminData({
@@ -110,53 +106,36 @@ const AdminDashboard = () => {
     try {
       const token = localStorage.getItem('access');
       if (!token) return;
-      const res = await fetch(`${API_BASE_URL}/withdrawals/withdraw/pending/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const res = await apiFetch(`${API_BASE_URL}/withdrawals/withdraw/pending/`);
       if (res.ok) {
         const data = await res.json();
-        const allWithdrawalsRes = await fetch(`${API_BASE_URL}/withdrawals/withdraw/all/`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        const allWithdrawalsRes = await apiFetch(`${API_BASE_URL}/withdrawals/withdraw/all/`);
         let allWithdrawals = data;
         if (allWithdrawalsRes.ok) {
           allWithdrawals = await allWithdrawalsRes.json();
         }
-        const withdrawalsWithUser = await Promise.all(
-          allWithdrawals.map(async (withdrawal) => {
-            if (
-              withdrawal.user &&
-              (withdrawal.user.first_name || withdrawal.user.last_name || withdrawal.user.email || withdrawal.user.phone_number)
-            ) {
-              return withdrawal;
-            }
-            if (withdrawal.user && withdrawal.user.id) {
-              try {
-                const userRes = await fetch(`${API_BASE_URL}/auth/users/${withdrawal.user.id}/`, {
-                  headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                  }
-                });
-                if (userRes.ok) {
-                  const userData = await userRes.json();
-                  return { ...withdrawal, user: userData };
-                }
-              } catch (e) {}
-            }
+        // Enrich withdrawals with user data from users array to avoid individual fetches
+        const withdrawalsWithUser = allWithdrawals.map(withdrawal => {
+          if (
+            withdrawal.user &&
+            (withdrawal.user.first_name || withdrawal.user.last_name || withdrawal.user.email || withdrawal.user.phone_number)
+          ) {
             return withdrawal;
-          })
-        );
+          }
+          if (withdrawal.user && withdrawal.user.id) {
+            const userData = users.find(u => u.id === withdrawal.user.id);
+            if (userData) {
+              return { ...withdrawal, user: userData };
+            }
+          }
+          return withdrawal;
+        });
         setWithdrawals(withdrawalsWithUser);
-        setStats(prev => prev.map(stat => 
-          stat.title === 'Pending Withdrawals' 
+        setStats(prev => prev.map(stat =>
+          stat.title === 'Pending Withdrawals'
             ? { ...stat, value: withdrawalsWithUser.filter(w => w.status === 'pending').length.toString() }
+            : stat.title === 'Total Withdrawals'
+            ? { ...stat, value: withdrawalsWithUser.length.toString() }
             : stat
         ));
       } else if (res.status === 401 || res.status === 403) {
@@ -180,12 +159,7 @@ const AdminDashboard = () => {
         window.location.href = '/login';
         return;
       }
-      const res = await fetch(`${API_BASE_URL}/auth/referrals/admin/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const res = await apiFetch(`${API_BASE_URL}/auth/referrals/admin/`);
       if (res.ok) {
         const data = await res.json();
         setReferrals(data.referral_relationships || []);
@@ -205,10 +179,7 @@ const AdminDashboard = () => {
   // Fetch KYC forms for admin verification
   const fetchKycForms = async () => {
     setKycLoading(true);
-    const token = localStorage.getItem("access");
-    const res = await fetch(`${API_BASE_URL}/auth/kyc/all/`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const res = await apiFetch(`${API_BASE_URL}/auth/kyc/all/`);
     if (res.ok) {
       const data = await res.json();
       setKycForms(data.kyc_forms || []);
@@ -218,10 +189,8 @@ const AdminDashboard = () => {
 
   // Verify KYC form
   const handleVerifyKyc = async (kycId) => {
-    const token = localStorage.getItem("access");
-    const res = await fetch(`${API_BASE_URL}/auth/kyc/${kycId}/verify/`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` }
+    const res = await apiFetch(`${API_BASE_URL}/auth/kyc/${kycId}/verify/`, {
+      method: "POST"
     });
     if (res.ok) {
       setKycForms(forms =>
@@ -238,23 +207,14 @@ const AdminDashboard = () => {
     if (!confirm(`Are you sure you want to ${action} this user?`)) return;
     try {
       setLoading(true);
-      const token = localStorage.getItem('access');
-      if (!token) {
-        window.location.href = '/login';
-        return;
-      }
       const endpoint = shouldBlock ? 'block' : 'unblock';
-      const res = await fetch(`${API_BASE_URL}/auth/users/${userId}/${endpoint}/`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      const res = await apiFetch(`${API_BASE_URL}/auth/users/${userId}/${endpoint}/`, {
+        method: 'POST'
       });
       if (res.ok) {
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
-            user.id === userId 
+        setUsers(prevUsers =>
+          prevUsers.map(user =>
+            user.id === userId
               ? { ...user, is_active: !shouldBlock }
               : user
           )
@@ -278,17 +238,8 @@ const AdminDashboard = () => {
     if (!confirm(`Are you sure you want to ${action} this withdrawal?`)) return;
     try {
       setLoading(true);
-      const token = localStorage.getItem('access');
-      if (!token) {
-        window.location.href = '/login';
-        return;
-      }
-      const res = await fetch(`${API_BASE_URL}/withdrawals/withdraw/${action}/${withdrawalId}/`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      const res = await apiFetch(`${API_BASE_URL}/withdrawals/withdraw/${action}/${withdrawalId}/`, {
+        method: 'POST'
       });
       if (res.ok) {
         await fetchWithdrawals();
@@ -322,7 +273,25 @@ const AdminDashboard = () => {
       });
       if (res.ok) {
         alert('Awarded Ksh50!');
-        fetchUsers();
+        // Update user's wallet_balance locally immediately
+        setUsers(prevUsers =>
+          prevUsers.map(user =>
+            user.id === userId
+              ? { ...user, wallet_balance: (parseFloat(user.wallet_balance) || 0) + 50 }
+              : user
+          )
+        );
+        // Update total wallet balance stat
+        setStats(prevStats => {
+          const totalWalletStat = prevStats.find(stat => stat.title === 'Total Wallet Balance');
+          const totalWalletValue = totalWalletStat ? parseFloat(totalWalletStat.value.replace(/[^\d.-]/g, '')) : 0;
+          const newTotal = totalWalletValue + 50;
+          return prevStats.map(stat =>
+            stat.title === 'Total Wallet Balance'
+              ? { ...stat, value: `Ksh ${newTotal.toFixed(2)}` }
+              : stat
+          );
+        });
       } else {
         alert('Failed to award wallet.');
       }
@@ -356,11 +325,22 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    fetchUsers();
-    fetchWithdrawals();
-    fetchReferrals();
-    fetchKycForms();
+    const initializeData = async () => {
+      await fetchUsers();
+      await fetchWithdrawals();
+      fetchReferrals();
+      fetchKycForms();
+    };
+    initializeData();
   }, []);
+
+  useEffect(() => {
+    if (activeSection === 'withdrawals') {
+      setFilterStatus('pending');
+    } else if (activeSection === 'users') {
+      setFilterStatus('all');
+    }
+  }, [activeSection]);
   // Referrals Management Section
   const ReferralsManagement = () => (
     <div className="space-y-6">
@@ -454,6 +434,7 @@ const AdminDashboard = () => {
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
                 <option value="approved">Approved</option>
+                <option value="paid">Paid</option>
                 <option value="rejected">Rejected</option>
               </select>
             </div>
@@ -475,25 +456,16 @@ const AdminDashboard = () => {
           </div>
         ) : (
           filteredWithdrawals.map((withdrawal) => {
-            const user = withdrawal.user || {};
-            const fullName = user.first_name && user.last_name
-              ? `${user.first_name} ${user.last_name}`
-              : user.first_name
-                ? user.first_name
-                : user.last_name
-                  ? user.last_name
-                  : user.username
-                    ? user.username
-                    : 'Unknown User';
-            const email = user.email ? user.email : user.username ? user.username : 'No email';
-            const phone = user.phone_number || 'No mobile';
+            const fullName = withdrawal.user_name || 'Unknown User';
+            const email = withdrawal.user_email || 'No email';
+            const phone = withdrawal.user_phone || withdrawal.user_phone_number || 'No mobile';
 
             return (
               <div key={withdrawal.id} className="bg-white rounded-xl shadow-md border border-green-200 p-6 flex flex-col space-y-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
                     <span className="text-white font-semibold text-lg">
-                      {(user.first_name?.[0] || user.last_name?.[0] || user.username?.[0] || 'U').toUpperCase()}
+                      {(withdrawal.user_name?.[0] || 'U').toUpperCase()}
                     </span>
                   </div>
                   <div>
@@ -503,17 +475,19 @@ const AdminDashboard = () => {
                   </div>
                 </div>
                 <div>
-                  <span className="text-green-500 text-xs">Amount</span>
-                  <div className="text-xl font-bold text-green-900">${withdrawal.amount}</div>
+                  <span className="text-green-500 text-xs">Amount Requested</span>
+                  <div className="text-xl font-bold text-green-900">Ksh {withdrawal.amount}</div>
                 </div>
                 <div>
                   <span className="text-green-500 text-xs">Status</span>
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ml-2 ${
-                    withdrawal.status === 'approved' ? 'bg-green-100 text-green-800' : 
+                    withdrawal.status === 'approved' ? 'bg-green-100 text-green-800' :
+                    withdrawal.status === 'paid' ? 'bg-blue-100 text-blue-800' :
                     withdrawal.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
                   }`}>
-                    {withdrawal.status === 'approved' ? <><CheckCircle size={12} className="mr-1" />Approved</> : 
-                     withdrawal.status === 'rejected' ? <><XCircle size={12} className="mr-1" />Rejected</> : 
+                    {withdrawal.status === 'approved' ? <><CheckCircle size={12} className="mr-1" />Approved</> :
+                     withdrawal.status === 'paid' ? <><CheckCircle size={12} className="mr-1" />Paid</> :
+                     withdrawal.status === 'rejected' ? <><XCircle size={12} className="mr-1" />Rejected</> :
                      <><Clock size={12} className="mr-1" />Pending</>}
                   </span>
                 </div>

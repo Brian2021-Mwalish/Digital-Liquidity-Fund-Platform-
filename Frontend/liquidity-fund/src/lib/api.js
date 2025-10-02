@@ -1,9 +1,9 @@
 // Central fetch with JWT for all API calls
 export const apiFetch = (url, options = {}) => {
-  const jwt = localStorage.getItem('jwt');
+  const token = localStorage.getItem('access');
   const headers = {
     ...(options.headers || {}),
-    ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     'Content-Type': 'application/json',
   };
   return fetch(url, { ...options, headers });

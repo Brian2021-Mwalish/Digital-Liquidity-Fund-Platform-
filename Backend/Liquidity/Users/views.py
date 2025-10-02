@@ -10,6 +10,7 @@ from django.core.mail import send_mail
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from decimal import Decimal
 
 from .models import CustomUser, KYCProfile, Referral
 from .serializers import KYCProfileSerializer, UserProfileSerializer
@@ -370,11 +371,11 @@ class KYCListView(APIView):
                 "user_id": kyc.user.id,
                 "full_name": kyc.full_name,
                 "email": kyc.email,
-                "mobile": kyc.mobile,
+                "mobile": kyc.phone_number,
                 "national_id": kyc.national_id,
                 "address": kyc.address,
-                "status": kyc.status,
-                "date_submitted": kyc.created_at,
+                "status": "verified" if kyc.is_verified else "pending",
+                "date_submitted": kyc.submitted_at,
             }
             for kyc in kycs
         ]
@@ -386,7 +387,7 @@ class KYCVerifyView(APIView):
     def post(self, request, kyc_id):
         try:
             kyc = KYCProfile.objects.get(pk=kyc_id)
-            kyc.status = "verified"
+            kyc.is_verified = True
             kyc.save()
             return Response({"message": "KYC verified."}, status=status.HTTP_200_OK)
         except KYCProfile.DoesNotExist:
@@ -485,11 +486,13 @@ from rest_framework.response import Response
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
 def admin_award_wallet(request, user_id):
+    from payment.models import Wallet
     amount = request.data.get('amount', 0)
     try:
         user = CustomUser.objects.get(pk=user_id)
-        user.wallet += float(amount)
-        user.save()
+        wallet, _ = Wallet.objects.get_or_create(user=user)
+        wallet.balance += Decimal(str(amount))
+        wallet.save()
         return Response({"message": f"Wallet updated for {user.email}."}, status=200)
     except CustomUser.DoesNotExist:
         return Response({"error": "User not found."}, status=404)

@@ -106,7 +106,19 @@ class WithdrawalListView(APIView):
 
 
 # -----------------------
-# Admin marks withdrawal as Paid
+# Admin views all withdrawals
+# -----------------------
+class WithdrawalAllView(APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request):
+        withdrawals = Withdrawal.objects.all().order_by("-created_at")
+        serializer = WithdrawalSerializer(withdrawals, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+# -----------------------
+# Admin approves withdrawal (moves to approved status)
 # -----------------------
 class WithdrawalApproveView(APIView):
     permission_classes = [permissions.IsAdminUser]
@@ -114,6 +126,29 @@ class WithdrawalApproveView(APIView):
     def post(self, request, withdrawal_id):
         try:
             withdrawal = Withdrawal.objects.get(id=withdrawal_id, status="pending")
+        except Withdrawal.DoesNotExist:
+            return Response(
+                {"error": "Withdrawal not found or already processed."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        withdrawal.status = "approved"
+        withdrawal.processed_at = timezone.now()
+        withdrawal.save(update_fields=["status", "processed_at"])
+        return Response(
+            {"message": "Withdrawal approved."}, status=status.HTTP_200_OK
+        )
+
+
+# -----------------------
+# Admin marks withdrawal as Paid
+# -----------------------
+class WithdrawalPaidView(APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request, withdrawal_id):
+        try:
+            withdrawal = Withdrawal.objects.get(id=withdrawal_id, status__in=["pending", "approved"])
         except Withdrawal.DoesNotExist:
             return Response(
                 {"error": "Withdrawal not found or already processed."},

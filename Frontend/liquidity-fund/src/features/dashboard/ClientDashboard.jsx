@@ -205,6 +205,15 @@ const ClientDashboard = () => {
     }
   }, [token]);
 
+  // Polling for balance updates every 5 seconds
+  useEffect(() => {
+    if (!token) return;
+    const interval = setInterval(() => {
+      fetchBalance();
+    }, 5000); // 5 seconds
+    return () => clearInterval(interval);
+  }, [token]);
+
   useEffect(() => {
     const fetchProfile = async () => {
       const token = localStorage.getItem('access'); // always use 'access' token

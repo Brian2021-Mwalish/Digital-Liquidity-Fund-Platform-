@@ -12,6 +12,7 @@ class WithdrawalCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Withdrawal
         fields = ["id", "mobile_number", "amount"]  # only these are required from client
+        read_only_fields = ["id"]
 
     def validate_amount(self, value):
         """Ensure amount is positive before saving."""
@@ -29,6 +30,7 @@ class WithdrawalSerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(source="user.email", read_only=True)
     user_name = serializers.SerializerMethodField()
     user_phone = serializers.CharField(source="mobile_number", read_only=True)
+    user_phone_number = serializers.CharField(source="user.phone_number", read_only=True)
 
     def get_user_name(self, obj):
         # Try first_name + last_name, fallback to full_name, then username
@@ -49,6 +51,7 @@ class WithdrawalSerializer(serializers.ModelSerializer):
             "user_email",
             "user_name",
             "user_phone",
+            "user_phone_number",
             "mobile_number",
             "amount",
             "status",

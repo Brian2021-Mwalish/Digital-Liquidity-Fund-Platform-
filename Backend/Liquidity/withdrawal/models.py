@@ -12,6 +12,7 @@ class Withdrawal(models.Model):
     STATUS_CHOICES = [
         ("pending", "Pending"),        # created, waiting for admin
         ("processing", "Processing"),  # auto after 48 hours (optional)
+        ("approved", "Approved"),      # admin approved the withdrawal
         ("paid", "Paid"),              # admin has confirmed payment
         ("rejected", "Rejected"),      # admin rejected
     ]

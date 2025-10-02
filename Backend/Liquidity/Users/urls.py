@@ -13,13 +13,14 @@ from .views import (
     BlockUserView,
     UnblockUserView,
     KYCProfileDetailView,
+    KYCListView,
+    KYCVerifyView,
     ReferralListView,
     ReferralAdminView,
     ReferralCodeView,       # ✅ added
     ReferralHistoryView,    # ✅ added
     admin_award_wallet,     # Admin wallet award endpoint
 )
-from .models import KYCListView
 
 urlpatterns = [
     # Auth
@@ -45,6 +46,7 @@ urlpatterns = [
     # KYC
     path("kyc/", KYCProfileDetailView.as_view(), name="kyc-profile"),  # ✅ now available at /api/kyc/
     path('kyc/all/', KYCListView.as_view(), name='kyc-list'),
+    path('kyc/<int:kyc_id>/verify/', KYCVerifyView.as_view(), name='kyc-verify'),
 
     # Referrals
     path("referrals/", ReferralListView.as_view(), name="referral-list"),
