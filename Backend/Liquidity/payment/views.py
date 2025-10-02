@@ -14,6 +14,7 @@ from django.db.models import Sum
 
 from .models import Payment, Wallet
 from .serializers import PaymentSerializer
+from Users.models import Referral
 
 User = get_user_model()
 
@@ -163,6 +164,22 @@ class MpesaCallbackView(APIView):
                             amount_deducted=amount,
                             status="completed",
                         )
+
+                        # Referral reward logic
+                        if user.referred_by:
+                            half_amount = amount / 2
+                            referrer_wallet, _ = Wallet.objects.get_or_create(user=user.referred_by)
+                            referrer_wallet.balance += half_amount
+                            referrer_wallet.save(update_fields=["balance"])
+
+                            # Update referral reward
+                            try:
+                                referral = Referral.objects.get(referrer=user.referred_by, referred=user)
+                                referral.reward += half_amount
+                                referral.save(update_fields=["reward"])
+                            except Referral.DoesNotExist:
+                                print(f"⚠️ Referral not found for referrer {user.referred_by} and referred {user}")
+
                     except User.DoesNotExist:
                         print("⚠️ Mpesa Callback: User not found for phone", phone)
 
