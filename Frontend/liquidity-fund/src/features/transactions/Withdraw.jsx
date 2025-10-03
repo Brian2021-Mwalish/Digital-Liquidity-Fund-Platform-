@@ -117,7 +117,7 @@ const Withdrawal = () => {
     <div className="flex items-center justify-center space-x-3">
       <div className="relative">
         <div className="w-8 h-8 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
-        <div className="absolute top-1 left-1 w-6 h-6 border-3 border-transparent border-t-blue-300 rounded-full animate-spin" style={{ animationDelay: '150ms' }}></div>
+        <div className="absolute top-1 left-1 w-6 h-6 border-3 border-transparent border-t-green-300 rounded-full animate-spin" style={{ animationDelay: '150ms' }}></div>
       </div>
       <span className="text-white font-medium">Processing...</span>
     </div>
@@ -126,13 +126,13 @@ const Withdrawal = () => {
   const quickAmounts = [300, 500, 1000, 2000, 5000];
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-indigo-100 via-white to-blue-100 flex items-center justify-center p-2 sm:p-4 lg:p-6 py-8 sm:py-12 lg:py-16">
+    <div className="min-h-screen w-full bg-gradient-to-br from-green-100 via-white to-green-100 flex items-center justify-center p-2 sm:p-4 lg:p-6 py-8 sm:py-12 lg:py-16">
       
-       {/* Dashboard back button top left */}
+       {/* Dashboard back button top left */} 
       <div className="absolute left-6 top-6 z-50">
         <Link
           to="/client-dashboard"
-          className="flex items-center gap-2 bg-blue-900 text-white px-5 py-2 rounded-xl shadow-lg font-semibold text-base hover:bg-blue-700 transition"
+          className="flex items-center gap-2 bg-green-900 text-white px-5 py-2 rounded-xl shadow-lg font-semibold text-base hover:bg-green-700 transition"
         >
           <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
             <path d="M15 19l-7-7 7-7" />
@@ -144,7 +144,7 @@ const Withdrawal = () => {
       <div 
         className="absolute inset-0 opacity-20 pointer-events-none"
         style={{
-          background: `radial-gradient(circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(99, 102, 241, 0.1) 0%, transparent 50%)`
+          background: `radial-gradient(circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(34, 197, 94, 0.1) 0%, transparent 50%)`
         }}
       />
 
@@ -171,7 +171,7 @@ const Withdrawal = () => {
               top: `${Math.random() * 100}%`,
             }}
           >
-            <DollarSign className="w-6 h-6 text-blue-200" />
+          <DollarSign className="w-6 h-6 text-green-200" />
           </motion.div>
         ))}
       </div>
@@ -189,20 +189,20 @@ const Withdrawal = () => {
         >
           <div className="flex items-center justify-center gap-3 mb-2">
             <motion.div
-              className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full shadow-lg"
+              className="p-3 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full shadow-lg"
               whileHover={{ rotate: 360, scale: 1.1 }}
               transition={{ duration: 0.6 }}
             >
               <Wallet className="text-white w-6 h-6" />
             </motion.div>
-            <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
               Withdraw Funds
             </h2>
             <motion.div
               animate={{ scale: [1, 1.2, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
-              <Zap className="text-indigo-600 w-5 h-5" />
+              <Zap className="text-emerald-600 w-5 h-5" />
             </motion.div>
           </div>
           <p className="text-sm sm:text-base text-gray-600 transition-colors duration-300 hover:text-gray-800">
@@ -234,8 +234,8 @@ const Withdrawal = () => {
                 >
                   <div className="flex items-center justify-center space-x-3 mb-4">
                     <div className="relative">
-                      <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-                      <div className="absolute top-2 left-2 w-8 h-8 border-3 border-transparent border-t-indigo-400 rounded-full animate-spin" style={{ animationDelay: '150ms' }}></div>
+                      <div className="w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
+                      <div className="absolute top-2 left-2 w-8 h-8 border-3 border-transparent border-t-emerald-400 rounded-full animate-spin" style={{ animationDelay: '150ms' }}></div>
                     </div>
                   </div>
                   <motion.p
@@ -260,8 +260,8 @@ const Withdrawal = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            <div className="text-center p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
-              <Clock className="w-5 h-5 text-blue-600 mx-auto mb-1" />
+            <div className="text-center p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-100">
+              <Clock className="w-5 h-5 text-green-600 mx-auto mb-1" />
               <p className="text-xs text-gray-600 font-medium">≤ 48 Hours</p>
             </div>
             <div className="text-center p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-100">
@@ -285,21 +285,21 @@ const Withdrawal = () => {
                 transition={{ delay: 0.5 }}
               >
                 <label className="block mb-2 font-semibold text-gray-700 text-xs sm:text-sm flex items-center gap-2">
-                  <Smartphone className="w-4 h-4 text-blue-600" />
+                  <Smartphone className="w-4 h-4 text-green-600" />
                   Mobile Number
                 </label>
                 <div className="relative">
                   <input
                     type="text"
                     placeholder="07XXXXXXXX or 01XXXXXXXX"
-                    value={mobileNumber}
-                    onChange={(e) => setMobileNumber(e.target.value)}
-                    className="w-full px-2 sm:px-3 py-2 sm:py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 text-xs sm:text-sm transition-all duration-300 border-gray-300 focus:ring-blue-300 focus:border-blue-400 bg-gray-50 hover:bg-white hover:border-gray-400"
-                  />
-                  <motion.div
-                    className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-400/10 to-indigo-400/10 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                    whileHover={{ scale: 1.02 }}
-                  />
+                  value={mobileNumber}
+                  onChange={(e) => setMobileNumber(e.target.value)}
+                  className="w-full px-2 sm:px-3 py-2 sm:py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 text-xs sm:text-sm transition-all duration-300 border-gray-300 focus:ring-green-300 focus:border-green-400 bg-gray-50 hover:bg-white hover:border-gray-400"
+                />
+                <motion.div
+                  className="absolute inset-0 rounded-lg bg-gradient-to-r from-green-400/10 to-emerald-400/10 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                  whileHover={{ scale: 1.02 }}
+                />
                 </div>
               </motion.div>
 
@@ -318,17 +318,17 @@ const Withdrawal = () => {
                   <input
                     type="number"
                     placeholder="Minimum: KSh 300"
-                    value={amount}
-                    onChange={(e) => {
-                      setAmount(e.target.value);
-                      setSelectedQuickAmount(null);
-                    }}
-                    className="w-full px-2 sm:px-3 py-2 sm:py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 text-xs sm:text-sm transition-all duration-300 border-gray-300 focus:ring-blue-300 focus:border-blue-400 bg-gray-50 hover:bg-white hover:border-gray-400"
-                  />
-                  <motion.div
-                    className="absolute inset-0 rounded-lg bg-gradient-to-r from-green-400/10 to-blue-400/10 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                    whileHover={{ scale: 1.02 }}
-                  />
+                  value={amount}
+                  onChange={(e) => {
+                    setAmount(e.target.value);
+                    setSelectedQuickAmount(null);
+                  }}
+                  className="w-full px-2 sm:px-3 py-2 sm:py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 text-xs sm:text-sm transition-all duration-300 border-gray-300 focus:ring-green-300 focus:border-green-400 bg-gray-50 hover:bg-white hover:border-gray-400"
+                />
+                <motion.div
+                  className="absolute inset-0 rounded-lg bg-gradient-to-r from-emerald-400/10 to-green-400/10 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                  whileHover={{ scale: 1.02 }}
+                />
                 </div>
               </motion.div>
             </div>
@@ -350,17 +350,17 @@ const Withdrawal = () => {
                     key={quickAmount}
                     type="button"
                     onClick={() => handleQuickAmount(quickAmount)}
-                    className={`py-2 px-2 rounded-lg border text-xs font-medium transition-all duration-300 relative overflow-hidden ${
+            className={`py-2 px-2 rounded-lg border text-xs font-medium transition-all duration-300 relative overflow-hidden ${
                       selectedQuickAmount === quickAmount
-                        ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-blue-500 shadow-lg"
-                        : "bg-gray-50 text-gray-700 border-gray-300 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700"
+                        ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white border-green-500 shadow-lg"
+                        : "bg-gray-50 text-gray-700 border-gray-300 hover:bg-green-50 hover:border-green-400 hover:text-green-700"
                     }`}
                     whileHover={{ scale: 1.05, y: -2 }}
                     whileTap={{ scale: 0.95 }}
                   >
                     {selectedQuickAmount === quickAmount && (
                       <motion.div
-                        className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-700"
+                        className="absolute inset-0 bg-gradient-to-r from-green-600 to-emerald-700"
                         layoutId="selectedAmount"
                         transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                       />
@@ -375,26 +375,26 @@ const Withdrawal = () => {
 
             {/* Submit Button matching Login style */}
             <motion.button
-              type="submit"
-              disabled={loading}
-              className="w-full group relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2.5 sm:py-3 rounded-xl font-semibold text-sm sm:text-base transition-all duration-300 hover:from-blue-700 hover:to-indigo-700 hover:-translate-y-1 hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
-              whileHover={!loading ? { scale: 1.02, y: -2 } : {}}
-              whileTap={!loading ? { scale: 0.98 } : {}}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.8 }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-700 to-indigo-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative z-10 flex items-center justify-center gap-2">
-                {loading ? (
-                  <LoadingSpinner />
-                ) : (
-                  <>
-                    <Wallet className="w-4 h-4" />
-                    Submit Withdrawal Request
-                  </>
-                )}
-              </div>
+            type="submit"
+            disabled={loading}
+            className="w-full group relative overflow-hidden bg-gradient-to-r from-green-600 to-emerald-600 text-white py-2.5 sm:py-3 rounded-xl font-semibold text-sm sm:text-base transition-all duration-300 hover:from-green-700 hover:to-emerald-700 hover:-translate-y-1 hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
+            whileHover={!loading ? { scale: 1.02, y: -2 } : {}}
+            whileTap={!loading ? { scale: 0.98 } : {}}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8 }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-green-700 to-emerald-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="relative z-10 flex items-center justify-center gap-2">
+              {loading ? (
+                <LoadingSpinner />
+              ) : (
+                <>
+                  <Wallet className="w-4 h-4" />
+                  Submit Withdrawal Request
+                </>
+              )}
+            </div>
 
               {/* Shimmer effect when not loading */}
               {!loading && (
@@ -409,12 +409,12 @@ const Withdrawal = () => {
 
           {/* Enhanced Info Card with withdrawal-specific features */}
           <motion.div
-            className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200"
+            className="mt-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.9 }}
           >
-            <h3 className="text-blue-700 font-semibold mb-3 flex items-center space-x-2">
+            <h3 className="text-green-700 font-semibold mb-3 flex items-center space-x-2">
               <Shield className="w-4 h-4" />
               <span>Withdrawal Guidelines</span>
             </h3>
@@ -424,7 +424,7 @@ const Withdrawal = () => {
                 <span>Min: KSh 300</span>
               </div>
               <div className="flex items-center space-x-2">
-                <Clock className="w-3 h-3 text-blue-500 flex-shrink-0" />
+                <Clock className="w-3 h-3 text-green-500 flex-shrink-0" />
                 <span>Up to 48 hours</span>
               </div>
               <div className="flex items-center space-x-2">
@@ -519,13 +519,13 @@ const Withdrawal = () => {
             transition={{ delay: 1 }}
           >
             <h3 className="text-gray-700 font-semibold mb-2 flex items-center space-x-2">
-              <Clock className="w-4 h-4 text-indigo-600" />
+              <Clock className="w-4 h-4 text-emerald-600" />
               <span>Recent Activity</span>
             </h3>
             <div className="space-y-2">
               <div className="flex justify-between items-center text-xs text-gray-600 p-2 bg-white rounded-lg">
                 <span>Last withdrawal</span>
-                <span className="font-medium text-blue-600">2 days ago</span>
+                <span className="font-medium text-green-600">2 days ago</span>
               </div>
               <div className="flex justify-between items-center text-xs text-gray-600 p-2 bg-white rounded-lg">
                 <span>Available balance</span>
@@ -562,7 +562,7 @@ const Withdrawal = () => {
             Need help with withdrawals?{" "}
             <button
               onClick={() => navigate("/support")}
-              className="font-semibold text-blue-600 hover:text-blue-700 transition-colors duration-200 hover:underline"
+              className="font-semibold text-green-600 hover:text-green-700 transition-colors duration-200 hover:underline"
             >
               Contact Support
             </button>

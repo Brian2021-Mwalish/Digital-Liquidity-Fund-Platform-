@@ -36,16 +36,16 @@ const LandingPage = () => {
                 <a href="#platform" className="text-gray-700 hover:text-emerald-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">Platform</a>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <button 
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <button
                 onClick={handleLogin}
-                className="text-emerald-600 font-semibold px-4 py-2 rounded-lg hover:bg-emerald-50 transition-all duration-300"
+                className="text-emerald-600 font-semibold px-3 py-2 sm:px-4 sm:py-2 rounded-lg hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-300 transform hover:scale-105 hover:shadow-md"
               >
                 Login
               </button>
-              <button 
+              <button
                 onClick={handleGetStarted}
-                className="bg-emerald-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-emerald-700 transition-all duration-300 transform hover:scale-105"
+                className="bg-emerald-600 text-white font-semibold px-4 py-2 sm:px-6 sm:py-2 rounded-lg hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
               >
                 Get Started
               </button>
@@ -82,13 +82,13 @@ const LandingPage = () => {
               Safe. Liquid. Rewarding. Start investing in short-term instruments like T-bills & FDRs with full M-Pesa integration.
             </p>
             <div className="flex flex-col sm:flex-row gap-2 justify-center items-center">
-              <button 
+              <button
                 onClick={handleGetStarted}
-                className="group relative bg-white text-emerald-600 font-bold px-4 py-2 rounded-xl hover:bg-yellow-400 hover:text-white transition-all duration-500 transform hover:scale-105 hover:shadow-xl text-xs sm:text-sm"
+                className="group relative bg-white text-emerald-600 font-bold px-4 py-2 rounded-xl hover:bg-yellow-400 hover:text-white transition-all duration-500 transform hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs sm:text-sm"
               >
                 Open Your Investment Account
               </button>
-              <button className="border border-white text-white font-semibold px-4 py-2 rounded-xl hover:bg-white hover:text-emerald-600 transition-all duration-300 transform hover:scale-105 text-xs sm:text-sm">
+              <button className="border border-white text-white font-semibold px-4 py-2 rounded-xl hover:bg-white hover:text-emerald-600 transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-white text-xs sm:text-sm">
                 Watch Demo
               </button>
             </div>
@@ -182,14 +182,15 @@ const LandingPage = () => {
             <div className="space-y-8">
               <div>
                 <h2 className="text-3xl sm:text-4xl font-bold mb-8 text-gray-800">
-                  <span className="bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">Investor</span> Benefits
+                  <span className="bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">Additional</span> Benefits
                 </h2>
                 <div className="space-y-6">
-                  {[ 
+                  {[
                     { title: "Portfolio visibility", desc: "Real-time tracking" },
                     { title: "M-Pesa integration", desc: "Seamless transactions" },
-                    
-                    
+                    { title: "Advanced security", desc: "Bank-level encryption" },
+
+
                   ].map((benefit, index) => (
                     <div key={index} className="flex items-start space-x-2 p-2 rounded-lg hover:bg-purple-50 transition-colors duration-300">
                       <div className="w-4 h-4 bg-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-1">
@@ -228,10 +229,10 @@ const LandingPage = () => {
           </div>
           
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center items-center mb-6">
-            <button className="bg-white text-yellow-600 px-8 py-4 rounded-2xl font-bold hover:bg-orange-100 transition-all duration-500 transform hover:scale-110 hover:shadow-2xl">
+            <button className="bg-white text-yellow-600 px-8 py-4 rounded-2xl font-bold hover:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-yellow-600 transition-all duration-500 transform hover:scale-110 hover:shadow-2xl">
             Share My Referral Code
           </button>
-          <button className="border border-white text-white font-semibold px-4 py-2 rounded-xl hover:bg-white hover:text-yellow-600 transition-all duration-300 text-xs sm:text-sm">
+          <button className="border border-white text-white font-semibold px-4 py-2 rounded-xl hover:bg-white hover:text-yellow-600 focus:outline-none focus:ring-2 focus:ring-white transition-all duration-300 text-xs sm:text-sm">
             Learn More
           </button>
           </div>
@@ -300,15 +301,15 @@ const LandingPage = () => {
             Low-risk. Fully managed. 100% digital. Join thousands of Kenyans investing smarter today.
           </p>
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center items-center">
-            <button 
+            <button
               onClick={handleGetStarted}
-              className="bg-white text-emerald-600 px-6 py-3 rounded-xl font-bold hover:bg-yellow-400 hover:text-white transition-all duration-500 transform hover:scale-105 hover:shadow-xl text-xs sm:text-sm"
+              className="bg-white text-emerald-600 px-6 py-3 rounded-xl font-bold hover:bg-yellow-400 hover:text-white transition-all duration-500 transform hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-emerald-600 text-xs sm:text-sm"
             >
               Get Started Now
             </button>
-            <button 
+            <button
               onClick={handleLogin}
-              className="border border-white text-white font-semibold px-6 py-3 rounded-xl hover:bg-white hover:text-emerald-600 transition-all duration-300 text-xs sm:text-sm"
+              className="border border-white text-white font-semibold px-6 py-3 rounded-xl hover:bg-white hover:text-emerald-600 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-white text-xs sm:text-sm"
             >
               Already have an account? Login
             </button>

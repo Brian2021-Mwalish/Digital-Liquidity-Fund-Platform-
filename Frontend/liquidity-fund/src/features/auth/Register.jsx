@@ -38,6 +38,7 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const {
     register,
@@ -114,35 +115,29 @@ const Register = () => {
         }
         if (errorMessages.length > 0) {
           errorMessages.forEach((msg, i) => {
-            toast.error(msg, { 
+            toast.error(msg, {
               id: `register-error-${i}`,
               duration: 5000,
               icon: <AlertCircle className="text-red-500" />
             });
           });
         } else {
-          toast.error("Registration failed. Please check your information and try again.", { 
+          toast.error("Registration failed. Please check your information and try again.", {
             id: "register",
-            duration: 4000 
+            duration: 4000
           });
         }
         toast.dismiss("register");
         setLoading(false);
         return;
-      }
-      toast.success("Welcome aboard! Your account has been created successfully.", { 
-        id: "register",
-        duration: 3000,
-        icon: <CheckCircle className="text-green-700" />
-      });
-      setTimeout(() => {
+      } else {
+        // Success
         toast.dismiss("register");
-        toast.loading("Redirecting to login page...", { id: "redirect" });
-        setTimeout(() => {
-          navigate("/login");
-        }, 1000);
-      }, 2000);
+        setShowSuccessModal(true);
+        setLoading(false);
+      }
     } catch (error) {
+      setShowSuccessModal(true);
       const errorMessage = error.message || "We're experiencing technical difficulties. Please try again.";
       toast.error(errorMessage, { 
         id: "register",
@@ -399,32 +394,54 @@ const Register = () => {
         </div>
       </div>
 
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl shadow-2xl p-10 max-w-lg mx-4 transform transition-all duration-500 scale-100 hover:scale-105 border-4 border-gray-300">
+            <div className="text-center">
+              <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <CheckCircle className="w-12 h-12 text-white" />
+              </div>
+              <h2 className="text-3xl font-extrabold text-gray-900 mb-4">Registration Successful !!!</h2>
+              <p className="text-gray-800 mb-8 text-lg font-medium">Please Login to continue your investment journey.</p>
+              <button
+                onClick={() => navigate("/login")}
+                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-4 px-8 rounded-2xl font-bold text-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-110 shadow-xl hover:shadow-2xl"
+              >
+                Go to Login
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style jsx>{`
         @keyframes shake {
           0%, 100% { transform: translateX(0); }
           25% { transform: translateX(-5px); }
           75% { transform: translateX(5px); }
         }
-        
+
         .shake {
           animation: shake 0.5s ease-in-out;
         }
-        
+
         @keyframes fade-in {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        
+
         .animate-fade-in {
           animation: fade-in 0.6s ease-out;
         }
-        
+
         @media (max-width: 768px) {
           .container {
             padding: 1rem;
           }
         }
-      `}</style>
+      `}
+      </style>
     </div>
   );
 };

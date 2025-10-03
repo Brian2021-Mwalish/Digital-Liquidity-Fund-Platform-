@@ -7,13 +7,14 @@ from django.contrib.auth import authenticate, logout, get_user_model
 from django.utils.timezone import now
 from django.conf import settings
 from django.core.mail import send_mail
+from django.http import Http404
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from decimal import Decimal
 
 from .models import CustomUser, KYCProfile, Referral
-from .serializers import KYCProfileSerializer, UserProfileSerializer
+from .serializers import KYCProfileSerializer, UserProfileSerializer, RegisterSerializer
 
 import logging
 import requests
@@ -45,35 +46,20 @@ class RegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        data = request.data
-        full_name = data.get("full_name")
-        email = data.get("email")
-        password = data.get("password")
-        referral_code = data.get("referral_code")  # ✅ optional referral code
-
-        if not full_name or not email or not password:
-            return Response({"error": "Full name, email, and password are required."},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        if CustomUser.objects.filter(email=email).exists():
-            return Response({"error": "A user with this email already exists."},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            user = CustomUser.objects.create_user(
-                email=email, full_name=full_name, password=password
-            )
-
+        serializer = RegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
 
             # Handle referral code from registration
+            referral_code = request.data.get("referral_code")
             if referral_code:
                 try:
                     referrer = CustomUser.objects.get(referral_code=referral_code)
                     # Create referral if not exists for this email
                     referral_obj, created = Referral.objects.get_or_create(
                         referrer=referrer,
-                        referred_email=email,
-                        defaults={"referred_name": full_name}
+                        referred_email=user.email,
+                        defaults={"referred_name": user.full_name}
                     )
                     # Mark referral as completed if user just registered
                     referral_obj.mark_completed(user)
@@ -94,10 +80,7 @@ class RegisterView(APIView):
                     "is_superuser": user.is_superuser,
                 }
             }, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            logger.error(f"Registration failed: {str(e)}")
-            return Response({"error": "Registration failed."},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # -----------------------
 # Login with Email + JWT
@@ -110,22 +93,22 @@ class LoginView(APIView):
         password = request.data.get("password")
 
         if not email or not password:
-            return Response({"error": "Email and password are required."},
+            return Response({"detail": "Email and password are required."},
                             status=status.HTTP_400_BAD_REQUEST)
 
         try:
             user = CustomUser.objects.get(email=email)
         except CustomUser.DoesNotExist:
-            return Response({"error": "No account found with this email."},
+            return Response({"detail": "No account found with this email."},
                             status=status.HTTP_404_NOT_FOUND)
 
         if not user.is_active:
-            return Response({"error": "This account is blocked. Contact admin."},
+            return Response({"detail": "This account is blocked. Contact admin."},
                             status=status.HTTP_403_FORBIDDEN)
 
         user = authenticate(request, username=email, password=password)
         if user is None:
-            return Response({"error": "Incorrect email or password."},
+            return Response({"detail": "Incorrect email or password."},
                             status=status.HTTP_401_UNAUTHORIZED)
 
         tokens = get_tokens_for_user(user)
@@ -166,20 +149,20 @@ class GoogleLoginView(APIView):
     def post(self, request):
         token = request.data.get("token")
         if not token:
-            return Response({"error": "Google token is required."}, status=400)
+            return Response({"detail": "Google token is required."}, status=400)
 
         try:
             google_url = f"https://oauth2.googleapis.com/tokeninfo?id_token={token}"
             resp = requests.get(google_url)
             if resp.status_code != 200:
-                return Response({"error": "Invalid Google token."}, status=400)
+                return Response({"detail": "Invalid Google token."}, status=400)
 
             user_data = resp.json()
             email = user_data.get("email")
             full_name = user_data.get("name")
 
             if not email:
-                return Response({"error": "Google token did not return an email."}, status=400)
+                return Response({"detail": "Google token did not return an email."}, status=400)
 
             user, _ = CustomUser.objects.get_or_create(
                 email=email,
@@ -358,7 +341,10 @@ class KYCProfileDetailView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         # If each user has one KYCProfile
-        return KYCProfile.objects.get(user=self.request.user)
+        try:
+            return KYCProfile.objects.get(user=self.request.user)
+        except KYCProfile.DoesNotExist:
+            raise Http404("KYC profile not found.")
 
 class KYCListView(APIView):
     permission_classes = [IsAdminUser]

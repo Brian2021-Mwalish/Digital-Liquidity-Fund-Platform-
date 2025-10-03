@@ -61,19 +61,30 @@ class UserSerializer(serializers.ModelSerializer):
 # -----------------------
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
-    confirm_password = serializers.CharField(write_only=True)
 
     class Meta:
         model = CustomUser
-        fields = ["email", "full_name", "password", "confirm_password"]
+        fields = ["email", "full_name", "password"]
 
-    def validate(self, data):
-        if data["password"] != data["confirm_password"]:
-            raise serializers.ValidationError("Passwords do not match.")
-        return data
+    def validate_email(self, value):
+        if CustomUser.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def validate_password(self, value):
+        if len(value) < 8:
+            raise serializers.ValidationError("Password must be at least 8 characters long.")
+        if not any(char.isupper() for char in value):
+            raise serializers.ValidationError("Password must contain at least one uppercase letter.")
+        if not any(char.islower() for char in value):
+            raise serializers.ValidationError("Password must contain at least one lowercase letter.")
+        if not any(char.isdigit() for char in value):
+            raise serializers.ValidationError("Password must contain at least one number.")
+        if not any(char in "!@#$%^&*(),.?\":{}|<>" for char in value):
+            raise serializers.ValidationError("Password must contain at least one special character.")
+        return value
 
     def create(self, validated_data):
-        validated_data.pop("confirm_password")
         user = CustomUser.objects.create_user(
             email=validated_data["email"],
             full_name=validated_data["full_name"],
@@ -137,7 +148,7 @@ class UserSessionSerializer(serializers.ModelSerializer):
 # KYC Profile Serializer
 # -----------------------
 class KYCProfileSerializer(serializers.ModelSerializer):
-    national_id = serializers.CharField(source="national_id")
+    national_id = serializers.CharField()
     status = serializers.SerializerMethodField()
     date_submitted = serializers.DateTimeField(source="submitted_at", read_only=True)
 

@@ -458,7 +458,8 @@ const AdminDashboard = () => {
           filteredWithdrawals.map((withdrawal) => {
             const fullName = withdrawal.user_name || 'Unknown User';
             const email = withdrawal.user_email || 'No email';
-            const phone = withdrawal.user_phone || withdrawal.user_phone_number || 'No mobile';
+            const userPhone = withdrawal.user_phone_number || 'No user phone';
+            const withdrawalMobile = withdrawal.mobile_number || 'No withdrawal mobile';
 
             return (
               <div key={withdrawal.id} className="bg-white rounded-xl shadow-md border border-green-200 p-6 flex flex-col space-y-4">
@@ -470,7 +471,8 @@ const AdminDashboard = () => {
                   </div>
                   <div>
                     <p className="font-medium text-green-900">{fullName}</p>
-                    <p className="text-sm text-green-700">Mobile: {phone}</p>
+                    <p className="text-sm text-green-700">User Phone: {userPhone}</p>
+                    <p className="text-sm text-green-700">Withdrawal Mobile: {withdrawalMobile}</p>
                     <p className="text-sm text-green-700">Email: {email}</p>
                   </div>
                 </div>
@@ -492,9 +494,15 @@ const AdminDashboard = () => {
                   </span>
                 </div>
                 <div>
-                  <span className="text-green-500 text-xs">Date</span>
+                  <span className="text-green-500 text-xs">Created At</span>
                   <div className="text-sm text-green-700">{new Date(withdrawal.created_at).toLocaleDateString()}</div>
                 </div>
+                {withdrawal.processed_at && (
+                  <div>
+                    <span className="text-green-500 text-xs">Processed At</span>
+                    <div className="text-sm text-green-700">{new Date(withdrawal.processed_at).toLocaleDateString()}</div>
+                  </div>
+                )}
                 <div>
                   {withdrawal.status === 'pending' ? (
                     <div className="flex items-center space-x-2">
