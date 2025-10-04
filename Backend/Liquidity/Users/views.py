@@ -344,7 +344,25 @@ class KYCProfileDetailView(generics.RetrieveUpdateAPIView):
         try:
             return KYCProfile.objects.get(user=self.request.user)
         except KYCProfile.DoesNotExist:
-            raise Http404("KYC profile not found.")
+            # Create a new KYCProfile for the user if it doesn't exist
+            kyc = KYCProfile.objects.create(
+                user=self.request.user,
+                full_name=self.request.user.full_name,
+                email=self.request.user.email,
+                phone_number=self.request.user.phone_number
+            )
+            return kyc
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        if serializer.is_valid():
+            self.perform_update(serializer)
+            return Response(serializer.data)
+        else:
+            logger.error(f"KYC update failed for user {request.user.email}: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class KYCListView(APIView):
     permission_classes = [IsAdminUser]

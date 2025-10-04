@@ -166,9 +166,18 @@ class KYCProfileSerializer(serializers.ModelSerializer):
             "status",
             "date_submitted",
         ]
+        read_only_fields = ["user", "full_name", "email", "phone_number"]
 
     def get_status(self, obj):
         return "verified" if obj.is_verified else "pending"
+
+    def update(self, instance, validated_data):
+        # Ensure full_name, email, phone_number are synced with user
+        user = instance.user
+        instance.full_name = user.full_name
+        instance.email = user.email
+        instance.phone_number = user.phone_number
+        return super().update(instance, validated_data)
 
 
 # -----------------------
