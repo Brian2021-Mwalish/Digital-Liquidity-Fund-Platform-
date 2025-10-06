@@ -32,6 +32,8 @@ const AdminDashboard = () => {
   ]);
   const [kycForms, setKycForms] = useState([]);
   const [kycLoading, setKycLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [withdrawalsViewMode, setWithdrawalsViewMode] = useState('list'); // 'list' or 'detail'
   const API_BASE_URL = 'http://127.0.0.1:8000/api';
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: BarChart3, count: null },
@@ -106,10 +108,10 @@ const AdminDashboard = () => {
     try {
       const token = localStorage.getItem('access');
       if (!token) return;
-      const res = await apiFetch(`${API_BASE_URL}/withdrawals/withdraw/pending/`);
+      const res = await apiFetch(`${API_BASE_URL}/withdraw/pending/`);
       if (res.ok) {
         const data = await res.json();
-        const allWithdrawalsRes = await apiFetch(`${API_BASE_URL}/withdrawals/withdraw/all/`);
+        const allWithdrawalsRes = await apiFetch(`${API_BASE_URL}/withdraw/all/`);
         let allWithdrawals = data;
         if (allWithdrawalsRes.ok) {
           allWithdrawals = await allWithdrawalsRes.json();
@@ -238,7 +240,7 @@ const AdminDashboard = () => {
     if (!confirm(`Are you sure you want to ${action} this withdrawal?`)) return;
     try {
       setLoading(true);
-      const res = await apiFetch(`${API_BASE_URL}/withdrawals/withdraw/${action}/${withdrawalId}/`, {
+      const res = await apiFetch(`${API_BASE_URL}/withdraw/${action}/${withdrawalId}/`, {
         method: 'POST'
       });
       if (res.ok) {
@@ -407,26 +409,128 @@ const AdminDashboard = () => {
   }, [users, withdrawals, searchTerm, filterStatus, activeSection]);
 
 
-  const WithdrawalsManagement = () => (
-    <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="relative flex-1 max-w-md">
-            <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search withdrawals..."
-              className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              disabled={loading}
-            />
+  const WithdrawalsManagement = () => {
+    // Group withdrawals by user id
+    const withdrawalsByUser = withdrawals.reduce((acc, withdrawal) => {
+      const userId = withdrawal.user?.id || withdrawal.user_id || 'unknown';
+      if (!acc[userId]) {
+        acc[userId] = [];
+      }
+      acc[userId].push(withdrawal);
+      return acc;
+    }, {});
+
+    // Get unique users with withdrawals
+    const usersWithWithdrawals = Object.keys(withdrawalsByUser).map(userId => {
+      const userWithdrawals = withdrawalsByUser[userId];
+      const user = userWithdrawals[0].user || {};
+      return {
+        id: userId,
+        email: userWithdrawals[0].user_email || user.email || 'N/A',
+        phone: userWithdrawals[0].user_phone_number || user.phone_number || 'N/A',
+        withdrawals: userWithdrawals
+      };
+    });
+
+    // Filter users by search term
+    const filteredUsersWithWithdrawals = usersWithWithdrawals.filter(user =>
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.phone.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    // Filter withdrawals by status filter in detail view
+    const filteredUserWithdrawals = selectedUser
+      ? withdrawalsByUser[selectedUser.id]?.filter(w => filterStatus === 'all' || w.status === filterStatus) || []
+      : [];
+
+    // Handler to select user for detail view
+    const handleSelectUser = (user) => {
+      setSelectedUser(user);
+      setWithdrawalsViewMode('detail');
+      setFilterStatus('all');
+      setSearchTerm('');
+    };
+
+    // Handler to go back to user list view
+    const handleBackToList = () => {
+      setSelectedUser(null);
+      setWithdrawalsViewMode('list');
+      setFilterStatus('all');
+      setSearchTerm('');
+    };
+
+    if (withdrawalsViewMode === 'list') {
+      return (
+        <div className="space-y-6">
+          <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+              <div className="relative flex-1 max-w-md">
+                <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search users by email or phone..."
+                  className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+            </div>
           </div>
-          <div className="flex items-center space-x-3">
-            <div className="relative">
-              <Filter size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+
+          <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden relative">
+            {loading && (
+              <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+              </div>
+            )}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-green-50 border-b border-green-200">
+                  <tr>
+                    <th className="text-left py-4 px-6 font-medium text-green-900">Email</th>
+                    <th className="text-left py-4 px-6 font-medium text-green-900">Phone Number</th>
+                    <th className="text-left py-4 px-6 font-medium text-green-900">Number of Withdrawals</th>
+                    <th className="text-left py-4 px-6 font-medium text-green-900">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-green-200">
+                  {filteredUsersWithWithdrawals.length === 0 && !loading ? (
+                    <tr>
+                      <td colSpan={4} className="text-center py-8 text-green-600">No users with withdrawals found</td>
+                    </tr>
+                  ) : (
+                    filteredUsersWithWithdrawals.map(user => (
+                      <tr key={user.id} className="hover:bg-green-50 cursor-pointer" onClick={() => handleSelectUser(user)}>
+                        <td className="py-4 px-6 text-green-900">{user.email}</td>
+                        <td className="py-4 px-6 text-green-900">{user.phone}</td>
+                        <td className="py-4 px-6 text-green-900">{user.withdrawals.length}</td>
+                        <td className="py-4 px-6 text-green-900 text-sm font-medium text-green-600 underline">View Withdrawals</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    } else if (withdrawalsViewMode === 'detail' && selectedUser) {
+      return (
+        <div className="space-y-6">
+          <button
+            onClick={handleBackToList}
+            className="text-green-600 hover:text-green-800 text-sm font-medium mb-4"
+          >
+            &larr; Back to Users List
+          </button>
+          <h2 className="text-xl font-bold text-green-700 mb-4">Withdrawals for {selectedUser.email}</h2>
+
+          <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200 mb-4">
+            <div className="flex items-center space-x-3 mb-4">
+              <Filter size={20} className="text-gray-400" />
               <select
-                className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 appearance-none bg-white"
+                className="pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 appearance-none bg-white"
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
                 disabled={loading}
@@ -438,107 +542,95 @@ const AdminDashboard = () => {
                 <option value="rejected">Rejected</option>
               </select>
             </div>
-            <span className="text-sm text-gray-600">{filteredWithdrawals.length} of {withdrawals.length} withdrawals</span>
+
+            {loading && (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+              </div>
+            )}
+
+            {!loading && filteredUserWithdrawals.length === 0 && (
+              <div className="text-center py-12 text-green-600">No withdrawals found for this user.</div>
+            )}
+
+            {!loading && filteredUserWithdrawals.length > 0 && (
+              <div className="space-y-4">
+                {filteredUserWithdrawals.map(withdrawal => (
+                  <div key={withdrawal.id} className="bg-white rounded-xl shadow-md border border-green-200 p-6 flex flex-col space-y-4">
+                    <div>
+                      <span className="text-green-500 text-xs">Email</span>
+                      <div className="text-green-900">{withdrawal.user_email || selectedUser.email}</div>
+                    </div>
+                    <div>
+                      <span className="text-green-500 text-xs">Phone Number</span>
+                      <div className="text-green-900">{withdrawal.user_phone_number || selectedUser.phone}</div>
+                    </div>
+                    <div>
+                      <span className="text-green-500 text-xs">Amount Requested</span>
+                      <div className="text-xl font-bold text-green-900">Ksh {withdrawal.amount}</div>
+                    </div>
+                    <div>
+                      <span className="text-green-500 text-xs">Status</span>
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ml-2 ${
+                        withdrawal.status === 'approved' ? 'bg-green-100 text-green-800' :
+                        withdrawal.status === 'paid' ? 'bg-blue-100 text-blue-800' :
+                        withdrawal.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {withdrawal.status === 'approved' ? <><CheckCircle size={12} className="mr-1" />Approved</> :
+                         withdrawal.status === 'paid' ? <><CheckCircle size={12} className="mr-1" />Paid</> :
+                         withdrawal.status === 'rejected' ? <><XCircle size={12} className="mr-1" />Rejected</> :
+                         <><Clock size={12} className="mr-1" />Pending</>}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-green-500 text-xs">Created At</span>
+                      <div className="text-sm text-green-700">{new Date(withdrawal.created_at).toLocaleDateString()}</div>
+                    </div>
+                    {withdrawal.processed_at && (
+                      <div>
+                        <span className="text-green-500 text-xs">Processed At</span>
+                        <div className="text-sm text-green-700">{new Date(withdrawal.processed_at).toLocaleDateString()}</div>
+                      </div>
+                    )}
+                    <div>
+                      {withdrawal.status === 'pending' ? (
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => handleWithdrawalAction(withdrawal.id, 'approve')}
+                            disabled={loading}
+                            className="px-3 py-1 text-xs font-medium rounded-md bg-green-100 text-green-700 hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => handleWithdrawalAction(withdrawal.id, 'reject')}
+                            disabled={loading}
+                            className="px-3 py-1 text-xs font-medium rounded-md bg-red-100 text-red-700 hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Reject
+                          </button>
+                          <button
+                            onClick={() => handleWithdrawalAction(withdrawal.id, 'paid')}
+                            disabled={loading}
+                            className="px-3 py-1 text-xs font-medium rounded-md bg-green-700 text-white hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Paid
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-green-500">No actions</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {loading && (
-          <div className="col-span-full flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-          </div>
-        )}
-        {filteredWithdrawals.length === 0 && !loading ? (
-          <div className="col-span-full text-center py-12">
-            <DollarSign size={48} className="mx-auto text-green-300 mb-4" />
-            <p className="text-green-600 text-lg">No withdrawals found</p>
-          </div>
-        ) : (
-          filteredWithdrawals.map((withdrawal) => {
-            const fullName = withdrawal.user_name || 'Unknown User';
-            const email = withdrawal.user_email || 'No email';
-            const userPhone = withdrawal.user_phone_number || 'No user phone';
-            const withdrawalMobile = withdrawal.mobile_number || 'No withdrawal mobile';
-
-            return (
-              <div key={withdrawal.id} className="bg-white rounded-xl shadow-md border border-green-200 p-6 flex flex-col space-y-4">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center">
-                    <span className="text-white font-semibold text-lg">
-                      {(withdrawal.user_name?.[0] || 'U').toUpperCase()}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-green-900">{fullName}</p>
-                    <p className="text-sm text-green-700">User Phone: {userPhone}</p>
-                    <p className="text-sm text-green-700">Withdrawal Mobile: {withdrawalMobile}</p>
-                    <p className="text-sm text-green-700">Email: {email}</p>
-                  </div>
-                </div>
-                <div>
-                  <span className="text-green-500 text-xs">Amount Requested</span>
-                  <div className="text-xl font-bold text-green-900">Ksh {withdrawal.amount}</div>
-                </div>
-                <div>
-                  <span className="text-green-500 text-xs">Status</span>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ml-2 ${
-                    withdrawal.status === 'approved' ? 'bg-green-100 text-green-800' :
-                    withdrawal.status === 'paid' ? 'bg-blue-100 text-blue-800' :
-                    withdrawal.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {withdrawal.status === 'approved' ? <><CheckCircle size={12} className="mr-1" />Approved</> :
-                     withdrawal.status === 'paid' ? <><CheckCircle size={12} className="mr-1" />Paid</> :
-                     withdrawal.status === 'rejected' ? <><XCircle size={12} className="mr-1" />Rejected</> :
-                     <><Clock size={12} className="mr-1" />Pending</>}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-green-500 text-xs">Created At</span>
-                  <div className="text-sm text-green-700">{new Date(withdrawal.created_at).toLocaleDateString()}</div>
-                </div>
-                {withdrawal.processed_at && (
-                  <div>
-                    <span className="text-green-500 text-xs">Processed At</span>
-                    <div className="text-sm text-green-700">{new Date(withdrawal.processed_at).toLocaleDateString()}</div>
-                  </div>
-                )}
-                <div>
-                  {withdrawal.status === 'pending' ? (
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handleWithdrawalAction(withdrawal.id, 'approve')}
-                        disabled={loading}
-                        className="px-3 py-1 text-xs font-medium rounded-md bg-green-100 text-green-700 hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Approve
-                      </button>
-                      <button
-                        onClick={() => handleWithdrawalAction(withdrawal.id, 'reject')}
-                        disabled={loading}
-                        className="px-3 py-1 text-xs font-medium rounded-md bg-red-100 text-red-700 hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Reject
-                      </button>
-                      <button
-                        onClick={() => handleWithdrawalAction(withdrawal.id, 'paid')}
-                        disabled={loading}
-                        className="px-3 py-1 text-xs font-medium rounded-md bg-green-700 text-white hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Paid
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="text-sm text-green-500">No actions</span>
-                  )}
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-    </div>
-  );
+      );
+    }
+    return null;
+  };
 
   const UsersManagement = () => (
     <div className="space-y-6">
@@ -789,15 +881,65 @@ const AdminDashboard = () => {
 
         {/* Section Content */}
         {activeSection === 'overview' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
-            {stats.map((stat, idx) => (
-              <div key={idx} className="bg-white rounded-xl shadow-md p-6 border border-green-200 flex flex-col items-start">
-                <span className="text-green-500 text-xs font-medium mb-2">{stat.title}</span>
-                <span className="text-2xl font-bold text-green-900">{stat.value}</span>
-                <span className={`mt-2 text-sm font-medium ${stat.positive ? 'text-green-600' : 'text-red-600'}`}>{stat.change}</span>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+              {stats.map((stat, idx) => (
+                <div key={idx} className="bg-white rounded-xl shadow-md p-6 border border-green-200 flex flex-col items-start">
+                  <span className="text-green-500 text-xs font-medium mb-2">{stat.title}</span>
+                  <span className="text-2xl font-bold text-green-900">{stat.value}</span>
+                  <span className={`mt-2 text-sm font-medium ${stat.positive ? 'text-green-600' : 'text-red-600'}`}>{stat.change}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Pending Withdrawals Section */}
+            <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200 mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-green-700">Pending Withdrawals</h2>
+                <button
+                  onClick={() => setActiveSection('withdrawals')}
+                  className="text-green-600 hover:text-green-800 text-sm font-medium"
+                >
+                  View All
+                </button>
               </div>
-            ))}
-          </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-green-50 border-b border-green-200">
+                    <tr>
+                      <th className="text-left py-3 px-4 font-medium text-green-900">Email</th>
+                      <th className="text-left py-3 px-4 font-medium text-green-900">Phone Number</th>
+                      <th className="text-left py-3 px-4 font-medium text-green-900">Amount</th>
+                      <th className="text-left py-3 px-4 font-medium text-green-900">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-green-200">
+                    {withdrawals.filter(w => w.status === 'pending').slice(0, 5).map((withdrawal) => (
+                      <tr key={withdrawal.id} className="hover:bg-green-50">
+                        <td className="py-3 px-4 text-green-900">{withdrawal.user_email || 'N/A'}</td>
+                        <td className="py-3 px-4 text-green-900">{withdrawal.user_phone_number || withdrawal.mobile_number || 'N/A'}</td>
+                        <td className="py-3 px-4 text-green-900 font-bold">Ksh {withdrawal.amount}</td>
+                        <td className="py-3 px-4">
+                          <button
+                            onClick={() => handleWithdrawalAction(withdrawal.id, 'paid')}
+                            disabled={loading}
+                            className="px-3 py-1 text-xs font-medium rounded-md bg-green-100 text-green-700 hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Paid
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {withdrawals.filter(w => w.status === 'pending').length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="text-center py-8 text-green-600">No pending withdrawals</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
         {activeSection === 'users' && <UsersManagement />}
         {activeSection === 'withdrawals' && <WithdrawalsManagement />}

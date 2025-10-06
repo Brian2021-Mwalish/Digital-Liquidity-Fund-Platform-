@@ -93,7 +93,7 @@ class LoginView(APIView):
         password = request.data.get("password")
 
         if not email or not password:
-            return Response({"detail": "Email and password are required."},
+            return Response({"errors": {"non_field_errors": ["Email and password are required."]}},
                             status=status.HTTP_400_BAD_REQUEST)
 
         try:
@@ -437,17 +437,19 @@ class ReferralHistoryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user
-        referred_users = user.referrals.all()  # related_name="referrals"
-        history = [
+        referrals = Referral.objects.filter(referrer=request.user).select_related("referred")
+        data = [
             {
-                "email": u.email,
-                "full_name": u.full_name,
-                "date_joined": u.date_joined,
+                "referred_name": r.referred.full_name if r.referred else r.referred_name,
+                "referred_email": r.referred.email if r.referred else r.referred_email,
+                "mobile": r.referred.phone_number if r.referred else None,
+                "created_at": r.created_at,
+                "status": r.status,
+                "reward": r.reward
             }
-            for u in referred_users
+            for r in referrals
         ]
-        return Response({"history": history})
+        return Response({"referrals": data})
 
 
 # -----------------------

@@ -61,7 +61,19 @@ const Login = () => {
 
       const result = await res.json();
       if (!res.ok) {
-        toast.error(result.detail || "Login failed");
+        // Show all error messages if available, else fallback to detail or generic message
+        if (result.errors) {
+          const messages = Object.values(result.errors)
+            .flat()
+            .join(", ");
+          toast.error(messages);
+        } else if (result.detail) {
+          toast.error(result.detail);
+        } else if (result.message) {
+          toast.error(result.message);
+        } else {
+          toast.error("Login failed");
+        }
         return;
       }
       toast.success("Login successful ✅");
@@ -81,7 +93,19 @@ const Login = () => {
 
       const result = await res.json();
       if (!res.ok) {
-        toast.error(result.detail || "Google login failed");
+        // Show all error messages if available, else fallback to detail or generic message
+        if (result.errors) {
+          const messages = Object.values(result.errors)
+            .flat()
+            .join(", ");
+          toast.error(messages);
+        } else if (result.detail) {
+          toast.error(result.detail);
+        } else if (result.message) {
+          toast.error(result.message);
+        } else {
+          toast.error("Google login failed");
+        }
         return;
       }
       toast.success("Google login successful ✅");
