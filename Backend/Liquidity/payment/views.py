@@ -1,6 +1,8 @@
 # payments/views.py
 import requests
 import json
+import logging
+from decimal import Decimal
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.conf import settings
@@ -11,11 +13,14 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from django.contrib.auth import get_user_model
 from django.db.models import Sum
+from django.utils import timezone
 
 from .models import Payment, Wallet
 from .serializers import PaymentSerializer
 from Users.models import Referral
+from rentals.models import Rental
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 # --- Currency Deduction Rules (amounts in KES) ---
@@ -46,12 +51,29 @@ def normalize_phone(phone):
         return "254" + phone
     elif phone.startswith("254"):
         return phone
-    else:
-        raise ValueError("Invalid phone number format")
+    raise ValueError("Invalid phone number format")
 
 
 # ---------------------------
-# 1. Get Balance (GET)
+# Helper: Get M-PESA Access Token
+# ---------------------------
+def get_mpesa_access_token():
+    """Fetch OAuth token from M-PESA API."""
+    url = f"{settings.MPESA_BASE_URL}/oauth/v1/generate?grant_type=client_credentials"
+    headers = {"Authorization": f"Basic {settings.MPESA_BASE64_ENCODED_CREDENTIALS}"}
+
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        token_data = response.json()
+        return token_data.get("access_token")
+    except requests.RequestException as e:
+        logger.error(f"M-PESA token request failed: {e}")
+        return None
+
+
+# ---------------------------
+# 1. Get Wallet Balance (GET)
 # ---------------------------
 class GetBalanceView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -68,40 +90,32 @@ class MpesaPaymentView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        try:
-            phone = request.data.get("phone")
-            card_currency = request.data.get("currency")
+        card_currency = request.data.get("currency")
+        phone = request.data.get("phone")
 
-            if not phone or not card_currency:
-                return Response({"error": "Phone and currency required"}, status=400)
+        if not card_currency:
+            return Response({"error": "Currency required"}, status=400)
 
-            if card_currency not in CURRENCY_COSTS:
-                return Response({"error": "Unsupported currency"}, status=400)
+        if card_currency not in CURRENCY_COSTS:
+            return Response({"error": "Unsupported currency"}, status=400)
 
-            # Normalize phone
+        amount = CURRENCY_COSTS[card_currency]
+
+        if phone:
+            # M-Pesa initiation
             try:
                 phone = normalize_phone(phone)
             except ValueError:
                 return Response({"error": "Invalid phone number format"}, status=400)
 
-            amount = CURRENCY_COSTS[card_currency]
-
-            # Request token
-            token_url = f"{settings.MPESA_BASE_URL}/oauth/v1/generate?grant_type=client_credentials"
-            token_headers = {
-                "Authorization": f"Basic {settings.MPESA_BASE64_ENCODED_CREDENTIALS}"
-            }
-            token_res = requests.get(token_url, headers=token_headers, timeout=10)
-            if token_res.status_code != 200:
-                return Response({"error": "Failed to get Mpesa token"}, status=500)
-
-            access_token = token_res.json().get("access_token")
+            # Get M-PESA access token
+            access_token = get_mpesa_access_token()
             if not access_token:
-                return Response({"error": "Invalid Mpesa token response"}, status=500)
+                return Response({"error": "Failed to retrieve M-PESA access token"}, status=500)
 
-            # STK Push
+            # Prepare STK Push
             stk_url = f"{settings.MPESA_BASE_URL}/mpesa/stkpush/v1/processrequest"
-            stk_headers = {"Authorization": f"Bearer {access_token}"}
+            headers = {"Authorization": f"Bearer {access_token}"}
             payload = {
                 "BusinessShortCode": settings.MPESA_SHORTCODE,
                 "Password": settings.MPESA_PASSWORD,
@@ -113,22 +127,46 @@ class MpesaPaymentView(APIView):
                 "PhoneNumber": phone,
                 "CallBackURL": settings.MPESA_CALLBACK_URL,
                 "AccountReference": card_currency,
-                "TransactionDesc": f"Wallet Topup via {card_currency} card",
+                "TransactionDesc": f"Wallet top-up via {card_currency}",
             }
 
-            res = requests.post(stk_url, json=payload, headers=stk_headers, timeout=10)
             try:
-                res_data = res.json()
-            except ValueError:
-                res_data = {"error": "Invalid response from Mpesa STK Push"}
+                response = requests.post(stk_url, json=payload, headers=headers, timeout=10)
+                data = response.json()
+                logger.info(f"STK Push initiated for {phone}: {json.dumps(data)}")
+                return Response(data, status=response.status_code)
+            except requests.RequestException as e:
+                logger.error(f"STK Push request failed: {e}")
+                return Response({"error": "Failed to send STK Push request"}, status=500)
+            except Exception as e:
+                logger.exception("Unexpected error in STK Push")
+                return Response({"error": str(e)}, status=500)
+        else:
+            # Deduct for currency rental
+            wallet, _ = Wallet.objects.get_or_create(user=request.user)
+            wallet.balance -= Decimal(str(amount))
+            wallet.save(update_fields=["balance"])
 
-            return Response(res_data, status=res.status_code if res_data else 500)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            Payment.objects.create(
+                user=request.user,
+                currency=card_currency,
+                amount_deducted=amount,
+                status="completed",
+            )
+
+            Rental.objects.create(
+                user=request.user,
+                currency=card_currency,
+                amount=amount,
+                expected_return=amount * 2,
+                status="active",
+            )
+
+            return Response({"new_balance": float(wallet.balance)}, status=status.HTTP_200_OK)
 
 
 # ---------------------------
-# 3. Mpesa Callback
+# 3. M-PESA Callback (POST)
 # ---------------------------
 @method_decorator(csrf_exempt, name="dispatch")
 class MpesaCallbackView(APIView):
@@ -137,59 +175,73 @@ class MpesaCallbackView(APIView):
     def post(self, request):
         try:
             data = request.data
-            print("📥 Mpesa Callback:", json.dumps(data, indent=2))
+            logger.info("📥 M-PESA Callback: %s", json.dumps(data, indent=2))
 
-            result_code = data.get("Body", {}).get("stkCallback", {}).get("ResultCode")
-            metadata = data.get("Body", {}).get("stkCallback", {}).get("CallbackMetadata", {})
+            stk_callback = data.get("Body", {}).get("stkCallback", {})
+            result_code = stk_callback.get("ResultCode")
 
-            if result_code == 0:
-                amount = None
-                phone = None
-                for item in metadata.get("Item", []):
-                    if item["Name"] == "Amount":
-                        amount = item["Value"]
-                    if item["Name"] == "PhoneNumber":
-                        phone = item["Value"]
+            if result_code != 0:
+                return JsonResponse({"ResultCode": 0, "ResultDesc": "Transaction failed or cancelled"})
 
-                if amount and phone:
-                    try:
-                        user = User.objects.get(phone_number=phone)
-                        wallet, _ = Wallet.objects.get_or_create(user=user)
-                        wallet.balance += amount
-                        wallet.save(update_fields=["balance"])
+            metadata = stk_callback.get("CallbackMetadata", {})
+            amount, phone = None, None
 
-                        Payment.objects.create(
-                            user=user,
-                            currency="KES",
-                            amount_deducted=amount,
-                            status="completed",
-                        )
+            for item in metadata.get("Item", []):
+                if item["Name"] == "Amount":
+                    amount = item["Value"]
+                elif item["Name"] == "PhoneNumber":
+                    phone = str(item["Value"])
 
-                        # Referral reward logic
-                        if user.referred_by:
-                            half_amount = amount / 2
-                            referrer_wallet, _ = Wallet.objects.get_or_create(user=user.referred_by)
-                            referrer_wallet.balance += half_amount
-                            referrer_wallet.save(update_fields=["balance"])
+            if not (amount and phone):
+                return JsonResponse({"ResultCode": 1, "ResultDesc": "Missing Amount or PhoneNumber"})
 
-                            # Update referral reward
-                            try:
-                                referral = Referral.objects.get(referrer=user.referred_by, referred=user)
-                                referral.reward += half_amount
-                                referral.save(update_fields=["reward"])
-                            except Referral.DoesNotExist:
-                                print(f"⚠️ Referral not found for referrer {user.referred_by} and referred {user}")
+            # Update user wallet
+            user = User.objects.filter(phone_number=phone).first()
+            if not user:
+                logger.warning(f"User not found for phone {phone}")
+                return JsonResponse({"ResultCode": 0, "ResultDesc": "User not found"})
 
-                    except User.DoesNotExist:
-                        print("⚠️ Mpesa Callback: User not found for phone", phone)
+            wallet, _ = Wallet.objects.get_or_create(user=user)
+            wallet.balance += amount
+            wallet.save(update_fields=["balance"])
 
-            return JsonResponse({"ResultCode": 0, "ResultDesc": "Received"})
+            Payment.objects.create(
+                user=user,
+                currency="KES",
+                amount_deducted=amount,
+                status="completed",
+            )
+
+            Rental.objects.create(
+                user=user,
+                currency="KES",
+                amount=amount,
+                expected_return=amount * 2,
+                status="active",
+            )
+
+            # Optional: Referral reward (if user was referred)
+            if getattr(user, "referred_by", None):
+                reward = amount / 2
+                ref_wallet, _ = Wallet.objects.get_or_create(user=user.referred_by)
+                ref_wallet.balance += reward
+                ref_wallet.save(update_fields=["balance"])
+
+                Referral.objects.update_or_create(
+                    referrer=user.referred_by,
+                    referred=user,
+                    defaults={"reward": reward},
+                )
+
+            return JsonResponse({"ResultCode": 0, "ResultDesc": "Callback processed successfully"})
+
         except Exception as e:
+            logger.exception("Error processing M-PESA callback")
             return JsonResponse({"ResultCode": 1, "ResultDesc": f"Error: {str(e)}"})
 
 
 # ---------------------------
-# 4. Payment History (GET)
+# 4. User Payment History (GET)
 # ---------------------------
 class PaymentHistoryView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -197,36 +249,46 @@ class PaymentHistoryView(APIView):
     def get(self, request):
         payments = Payment.objects.filter(user=request.user).order_by("-created_at")
         serializer = PaymentSerializer(payments, many=True)
-        return Response({"payments": serializer.data}, status=status.HTTP_200_OK)
+        return Response({"payments": serializer.data}, status=200)
 
 
 # ---------------------------
-# 5. Admin Payments Overview (GET all)
+# 5. Admin Payments Overview (GET)
 # ---------------------------
 class AdminPaymentsOverviewView(APIView):
     permission_classes = [permissions.IsAdminUser]
 
     def get(self, request):
-        try:
-            user_id = request.query_params.get("user_id")
-            if user_id:
-                payments = Payment.objects.filter(user_id=user_id).order_by("-created_at")
-            else:
-                payments = Payment.objects.all().order_by("-created_at")
+        user_id = request.query_params.get("user_id")
+        payments = Payment.objects.filter(user_id=user_id) if user_id else Payment.objects.all()
+        payments = payments.order_by("-created_at")
 
-            serializer = PaymentSerializer(payments, many=True)
+        serializer = PaymentSerializer(payments, many=True)
+        total_amount = payments.aggregate(total=Sum("amount_deducted"))["total"] or 0
 
-            totals = {
-                "KES": payments.aggregate(total=Sum("amount_deducted"))["total"] or 0
-            }
+        return Response(
+            {
+                "payments": serializer.data,
+                "totals_by_currency": {"KES": total_amount},
+                "grand_total": total_amount,
+            },
+            status=200,
+        )
 
-            return Response(
-                {
-                    "payments": serializer.data,
-                    "totals_by_currency": totals,
-                    "grand_total": totals["KES"],
-                },
-                status=status.HTTP_200_OK,
-            )
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# ---------------------------
+# 6. User Earnings (GET) - Total earnings this month from completed payments
+# ---------------------------
+class EarningsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        now = timezone.now()
+        total_earnings = Payment.objects.filter(
+            user=request.user,
+            status="completed",
+            created_at__year=now.year,
+            created_at__month=now.month
+        ).aggregate(total=Sum("amount_deducted"))["total"] or 0
+
+        return Response({"total_earnings": float(total_earnings)}, status=status.HTTP_200_OK)

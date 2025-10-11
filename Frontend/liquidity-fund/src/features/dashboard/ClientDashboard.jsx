@@ -7,6 +7,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 const ClientDashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState(null);
   const [activeRentals, setActiveRentals] = useState([]);
   const [balance, setBalance] = useState(0);
@@ -129,21 +130,24 @@ const ClientDashboard = () => {
     }
   };
 
-  const handlePayment = async () => {
-    if (!validatePhone(phoneNumber)) return;
-    
+  const proceedPayment = async () => {
+    setShowPinModal(false);
     setIsLoading(true);
     setPaymentStatus('Initiating M-Pesa payment...');
-    
+
     try {
       const mpesaResult = await initiateMpesaPayment(phoneNumber, selectedCurrency.code);
       setPaymentStatus('Check your phone for M-Pesa prompt...');
-      
-      setTimeout(async () => {
-        try {
-          setPaymentStatus('Processing rental...');
-          const paymentResult = await makePayment(selectedCurrency.code);
-          
+
+      // Poll for balance update after STK push deduction
+      const initialBalance = balance;
+      let attempts = 0;
+      const pollInterval = setInterval(async () => {
+        attempts++;
+        await fetchBalance();
+        if (balance !== initialBalance) {
+          clearInterval(pollInterval);
+          // Balance updated from backend after deduction
           const newRental = {
             id: Date.now(),
             currency: selectedCurrency,
@@ -151,24 +155,30 @@ const ClientDashboard = () => {
             expectedReturn: selectedCurrency.price * 2,
             status: 'active'
           };
-          
           setActiveRentals([...activeRentals, newRental]);
           setShowPaymentModal(false);
           setActiveTab('rentals');
           setPaymentStatus('');
           setPhoneNumber('');
-          fetchBalance();
           fetchPaymentHistory();
-        } catch (error) {
-          setPaymentStatus('Payment processing failed: ' + error.message);
+          setIsLoading(false);
+        } else if (attempts > 60) { // 60 seconds timeout
+          clearInterval(pollInterval);
+          setPaymentStatus('Payment timeout. Please try again.');
+          setIsLoading(false);
         }
-      }, 3000);
-      
+      }, 1000);
+
     } catch (error) {
       setPaymentStatus('Payment failed: ' + error.message);
-    } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePayment = async () => {
+    if (!validatePhone(phoneNumber)) return;
+
+    setShowPinModal(true);
   };
 
   useEffect(() => {
@@ -552,6 +562,33 @@ const ClientDashboard = () => {
                   {isLoading ? 'Processing...' : 'Pay with M-Pesa'}
                 </button>
                 <button onClick={() => setShowPaymentModal(false)} className="border border-gray-300 bg-white hover:bg-gray-50 py-3 px-4 rounded-lg text-gray-700">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PIN Modal */}
+      {showPinModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl relative">
+            <h3 className="text-lg font-semibold mb-4 text-gray-800 text-center">
+              Ready to Deduct from your M-Pesa
+            </h3>
+            <div className="space-y-4">
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <p className="text-gray-700">Please enter your M-Pesa PIN on your phone when prompted.</p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={proceedPayment}
+                  className="flex-1 bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition-all"
+                >
+                  OK
+                </button>
+                <button onClick={() => setShowPinModal(false)} className="border border-gray-300 bg-white hover:bg-gray-50 py-3 px-4 rounded-lg text-gray-700">
                   Cancel
                 </button>
               </div>

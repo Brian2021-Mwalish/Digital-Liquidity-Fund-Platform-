@@ -18,6 +18,9 @@ urlpatterns = [
     # 🔹 Payments routes
     path("api/payments/", include(("payment.urls", "payment"), namespace="payments")),
 
+    # 🔹 Rentals routes
+    path("api/rentals/", include(("rentals.urls", "rentals"), namespace="rentals")),
+
     # 🔹 Withdrawals routes
     path("api/withdraw/", include(("withdrawal.urls", "withdrawal"), namespace="withdrawal")),
 

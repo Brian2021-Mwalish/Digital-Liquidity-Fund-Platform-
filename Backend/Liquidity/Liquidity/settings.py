@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "Users",
     "payment",
     "withdrawal",
+    "rentals",
 ]
 
 # Google OAuth
