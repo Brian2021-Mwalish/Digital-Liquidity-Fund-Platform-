@@ -1,13 +1,9 @@
-# TODO: Implement Missing Endpoints for Earnings and Pending Returns
+# Maintenance Notification Task
 
-- [x] Create rentals Django app structure (models.py, views.py, urls.py, apps.py, __init__.py, migrations/__init__.py)
-- [ ] Define Rental model in rentals/models.py (user, currency, amount, expected_return, status, created_at)
-- [ ] Create PendingReturnsView in rentals/views.py (sum expected_return for active rentals)
-- [ ] Set up rentals/urls.py with pending-returns/ path
-- [ ] Add "rentals" to INSTALLED_APPS in settings.py
-- [ ] Include api/rentals/ in main urls.py
-- [ ] Add EarningsView to payment/views.py (sum amount_deducted for completed payments this month)
-- [ ] Add earnings/ path to payment/urls.py
-- [x] Modify MpesaPaymentView and MpesaCallbackView to create Rental instances on payment completion
-- [ ] Run makemigrations and migrate for rentals app
-- [ ] Test endpoints to ensure correct data return
+## Steps to Complete
+- [x] Add MaintenanceStatusView in Backend/Liquidity/support/views.py
+- [x] Add URL pattern for maintenance status in Backend/Liquidity/support/urls.py
+- [x] Modify ClientDashboard.jsx to fetch maintenance status and display red notification
+- [x] Test the API endpoint
+- [x] Test the frontend notification
+- [x] Allow admins to access AdminDashboard during maintenance by modifying RequireAuth.jsx

@@ -2,7 +2,9 @@
 import requests
 import json
 import logging
+import base64
 from decimal import Decimal
+from datetime import datetime
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.conf import settings
@@ -34,9 +36,9 @@ CURRENCY_COSTS = {
 }
 
 
-# ---------------------------
+# ---------------------------#
 # Helper: Normalize phone number
-# ---------------------------
+# ---------------------------#
 def normalize_phone(phone):
     """
     Convert Kenyan phone numbers to international format.
@@ -54,9 +56,9 @@ def normalize_phone(phone):
     raise ValueError("Invalid phone number format")
 
 
-# ---------------------------
+# ---------------------------#
 # Helper: Get M-PESA Access Token
-# ---------------------------
+# ---------------------------#
 def get_mpesa_access_token():
     """Fetch OAuth token from M-PESA API."""
     url = f"{settings.MPESA_BASE_URL}/oauth/v1/generate?grant_type=client_credentials"
@@ -72,9 +74,9 @@ def get_mpesa_access_token():
         return None
 
 
-# ---------------------------
+# ---------------------------#
 # 1. Get Wallet Balance (GET)
-# ---------------------------
+# ---------------------------#
 class GetBalanceView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -83,9 +85,9 @@ class GetBalanceView(APIView):
         return Response({"balance": wallet.balance}, status=status.HTTP_200_OK)
 
 
-# ---------------------------
+# ---------------------------#
 # 2. Initiate Mpesa STK Push
-# ---------------------------
+# ---------------------------#
 class MpesaPaymentView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -108,18 +110,30 @@ class MpesaPaymentView(APIView):
             except ValueError:
                 return Response({"error": "Invalid phone number format"}, status=400)
 
+            # Validate callback URL
+            if not settings.MPESA_CALLBACK_URL:
+                logger.error("MPESA_CALLBACK_URL not set")
+                return Response({"error": "M-PESA callback URL not configured"}, status=500)
+
             # Get M-PESA access token
             access_token = get_mpesa_access_token()
             if not access_token:
                 return Response({"error": "Failed to retrieve M-PESA access token"}, status=500)
+
+            # Generate current timestamp and password
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            password = base64.b64encode(f"{settings.MPESA_SHORTCODE}{settings.MPESA_PASSKEY}{timestamp}".encode()).decode()
+
+            # Log environment and payload
+            logger.info(f"M-PESA Environment: {settings.MPESA_ENV}, Base URL: {settings.MPESA_BASE_URL}")
 
             # Prepare STK Push
             stk_url = f"{settings.MPESA_BASE_URL}/mpesa/stkpush/v1/processrequest"
             headers = {"Authorization": f"Bearer {access_token}"}
             payload = {
                 "BusinessShortCode": settings.MPESA_SHORTCODE,
-                "Password": settings.MPESA_PASSWORD,
-                "Timestamp": settings.MPESA_TIMESTAMP,
+                "Password": password,
+                "Timestamp": timestamp,
                 "TransactionType": "CustomerPayBillOnline",
                 "Amount": amount,
                 "PartyA": phone,
@@ -165,9 +179,9 @@ class MpesaPaymentView(APIView):
             return Response({"new_balance": float(wallet.balance)}, status=status.HTTP_200_OK)
 
 
-# ---------------------------
+# ---------------------------#
 # 3. M-PESA Callback (POST)
-# ---------------------------
+# ---------------------------#
 @method_decorator(csrf_exempt, name="dispatch")
 class MpesaCallbackView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -240,9 +254,9 @@ class MpesaCallbackView(APIView):
             return JsonResponse({"ResultCode": 1, "ResultDesc": f"Error: {str(e)}"})
 
 
-# ---------------------------
+# ---------------------------#
 # 4. User Payment History (GET)
-# ---------------------------
+# ---------------------------#
 class PaymentHistoryView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -252,9 +266,9 @@ class PaymentHistoryView(APIView):
         return Response({"payments": serializer.data}, status=200)
 
 
-# ---------------------------
+# ---------------------------#
 # 5. Admin Payments Overview (GET)
-# ---------------------------
+# ---------------------------#
 class AdminPaymentsOverviewView(APIView):
     permission_classes = [permissions.IsAdminUser]
 
@@ -276,9 +290,9 @@ class AdminPaymentsOverviewView(APIView):
         )
 
 
-# ---------------------------
+# ---------------------------#
 # 6. User Earnings (GET) - Total earnings this month from completed payments
-# ---------------------------
+# ---------------------------#
 class EarningsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 

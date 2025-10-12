@@ -5,6 +5,7 @@ import {
   CheckCircle, Eye, Filter, MoreHorizontal, DollarSign, Clock, Check, XCircle
 } from 'lucide-react';
 import { apiFetch } from '../../lib/api';
+import Contact from '../../components/Contact';
 
 
 const AdminDashboard = () => {
@@ -34,6 +35,10 @@ const AdminDashboard = () => {
   const [kycLoading, setKycLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
   const [withdrawalsViewMode, setWithdrawalsViewMode] = useState('list'); // 'list' or 'detail'
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [systemStatus, setSystemStatus] = useState('online');
+  const [settingsLoading, setSettingsLoading] = useState(false);
   const API_BASE_URL = 'http://127.0.0.1:8000/api';
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: BarChart3, count: null },
@@ -326,12 +331,58 @@ const AdminDashboard = () => {
     }
   };
 
+  // Fetch settings
+  const fetchSettings = async () => {
+    try {
+      const res = await apiFetch(`${API_BASE_URL}/support/settings/`);
+      if (res.ok) {
+        const data = await res.json();
+        setMaintenanceMode(data.maintenance_mode || false);
+        setEmailNotifications(data.email_notifications || true);
+      }
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+    }
+  };
+
+  // Update settings
+  const updateSettings = async (key, value) => {
+    // Optimistically update state
+    if (key === 'maintenance_mode') setMaintenanceMode(value);
+    if (key === 'email_notifications') setEmailNotifications(value);
+    try {
+      setSettingsLoading(true);
+      const res = await apiFetch(`${API_BASE_URL}/support/settings/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ [key]: value }),
+      });
+      if (!res.ok) {
+        alert('Failed to update settings');
+        // Revert the change
+        if (key === 'maintenance_mode') setMaintenanceMode(!value);
+        if (key === 'email_notifications') setEmailNotifications(!value);
+      }
+    } catch (error) {
+      console.error('Error updating settings:', error);
+      alert('Error updating settings');
+      // Revert the change
+      if (key === 'maintenance_mode') setMaintenanceMode(!value);
+      if (key === 'email_notifications') setEmailNotifications(!value);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
   useEffect(() => {
     const initializeData = async () => {
       await fetchUsers();
       await fetchWithdrawals();
       fetchReferrals();
       fetchKycForms();
+      fetchSettings();
     };
     initializeData();
   }, []);
@@ -843,6 +894,109 @@ const AdminDashboard = () => {
     </div>
   );
 
+  // Settings Management Section
+  const SettingsManagement = () => (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-green-700 mb-6">System Settings</h2>
+
+      {/* System Status */}
+      <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+        <h3 className="text-lg font-semibold text-green-700 mb-4">System Status</h3>
+        <div className="flex items-center space-x-4">
+          <Activity size={24} className={systemStatus === 'online' ? 'text-green-500' : 'text-red-500'} />
+          <span className={`text-lg font-medium ${systemStatus === 'online' ? 'text-green-700' : 'text-red-700'}`}>
+            System is {systemStatus}
+          </span>
+        </div>
+        <p className="text-sm text-gray-600 mt-2">Last checked: {new Date().toLocaleString()}</p>
+      </div>
+
+      {/* Maintenance Mode */}
+      <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+        <h3 className="text-lg font-semibold text-green-700 mb-4">Maintenance Mode</h3>
+        <div className="flex items-center space-x-4">
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={maintenanceMode}
+              onChange={(e) => updateSettings('maintenance_mode', e.target.checked)}
+              className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
+              disabled={settingsLoading}
+            />
+            <span className="text-sm font-medium text-gray-900">Enable Maintenance Mode</span>
+          </label>
+        </div>
+        <p className="text-sm text-gray-600 mt-2">When enabled, users will see a maintenance page.</p>
+      </div>
+
+      {/* Email Notifications */}
+      <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+        <h3 className="text-lg font-semibold text-green-700 mb-4">Email Notifications</h3>
+        <div className="flex items-center space-x-4">
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={emailNotifications}
+              onChange={(e) => updateSettings('email_notifications', e.target.checked)}
+              className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
+              disabled={settingsLoading}
+            />
+            <span className="text-sm font-medium text-gray-900">Enable Email Notifications</span>
+          </label>
+        </div>
+        <p className="text-sm text-gray-600 mt-2">Send email notifications for important events.</p>
+      </div>
+
+      {/* System Information */}
+      <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+        <h3 className="text-lg font-semibold text-green-700 mb-4">System Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <span className="text-green-500 text-xs">Version</span>
+            <div className="text-green-900 font-medium">1.0.0</div>
+          </div>
+          <div>
+            <span className="text-green-500 text-xs">Environment</span>
+            <div className="text-green-900 font-medium">Production</div>
+          </div>
+          <div>
+            <span className="text-green-500 text-xs">Uptime</span>
+            <div className="text-green-900 font-medium">24h 30m</div>
+          </div>
+          <div>
+            <span className="text-green-500 text-xs">Database</span>
+            <div className="text-green-900 font-medium">PostgreSQL</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+        <h3 className="text-lg font-semibold text-green-700 mb-4">System Actions</h3>
+        <div className="flex flex-wrap gap-4">
+          <button
+            className="px-4 py-2 bg-green-100 text-green-700 rounded-lg font-medium hover:bg-green-200 transition-colors"
+            onClick={() => alert('Refreshing system data...')}
+          >
+            Refresh Data
+          </button>
+          <button
+            className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg font-medium hover:bg-blue-200 transition-colors"
+            onClick={() => alert('Clearing cache...')}
+          >
+            Clear Cache
+          </button>
+          <button
+            className="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg font-medium hover:bg-yellow-200 transition-colors"
+            onClick={() => alert('Backing up data...')}
+          >
+            Backup Data
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-green-50 flex">
       {/* Sidebar */}
@@ -945,6 +1099,8 @@ const AdminDashboard = () => {
         {activeSection === 'withdrawals' && <WithdrawalsManagement />}
         {activeSection === 'referrals' && <ReferralsManagement />}
         {activeSection === 'kyc' && <KycManagement />}
+        {activeSection === 'settings' && <SettingsManagement />}
+        {activeSection === 'support' && <Contact isAdmin={true} />}
       </main>
     </div>
   );

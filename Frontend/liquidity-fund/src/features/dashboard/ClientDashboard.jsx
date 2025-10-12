@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import KYCForm from "../auth/KYCForm";
+import Contact from "../../components/Contact";
 import { Link } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -21,6 +22,7 @@ const ClientDashboard = () => {
   const [profile, setProfile] = useState(null);
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [pendingReturns, setPendingReturns] = useState(0);
+  const [isMaintenance, setIsMaintenance] = useState(false);
 
   const token = localStorage.getItem('access'); // always use 'access' token
 
@@ -250,6 +252,22 @@ const ClientDashboard = () => {
     fetchProfile();
   }, []);
 
+  const fetchMaintenance = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/support/maintenance/`);
+      if (response.ok) {
+        const data = await response.json();
+        setIsMaintenance(data.maintenance_mode);
+      }
+    } catch (error) {
+      console.error('Failed to fetch maintenance status:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchMaintenance();
+  }, []);
+
   const StatCard = ({ title, value, subtitle, bgColor = "bg-white" }) => (
     <div className={`${bgColor} border border-gray-200 rounded-xl shadow-lg p-6 hover:shadow-xl transition-all`}>
       <h3 className="text-sm text-gray-600 mb-2 font-medium">{title}</h3>
@@ -265,7 +283,7 @@ const ClientDashboard = () => {
     { id: 'rentals', label: 'My Rentals' },
     { id: 'referrals', label: 'Referrals', link: '/referrals' },
     { id: 'history', label: 'Payment History', link: '/home' },
-    { id: 'support', label: 'Support', link: '/contact' }
+    { id: 'support', label: 'Support' }
 
   ];
 
@@ -424,6 +442,9 @@ const ClientDashboard = () => {
           </div>
         );
 
+      case 'support':
+        return <Contact isDashboard={true} />;
+
       default:
         return null;
     }
@@ -514,6 +535,11 @@ const ClientDashboard = () => {
 
         {/* Main Content */}
         <main className="flex-1 p-6 overflow-auto">
+          {isMaintenance && (
+            <div className="bg-red-500 text-white p-4 rounded-lg mb-6 text-center font-bold">
+              System is under maintenance
+            </div>
+          )}
           {renderContent()}
         </main>
       </div>

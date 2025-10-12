@@ -24,6 +24,9 @@ urlpatterns = [
     # 🔹 Withdrawals routes
     path("api/withdraw/", include(("withdrawal.urls", "withdrawal"), namespace="withdrawal")),
 
+    # 🔹 Support routes
+    path("api/support/", include(("support.urls", "support"), namespace="support")),
+
     # 🔹 Direct profile shortcut
     path("api/profile/", ProfileView.as_view(), name="profile-direct"),
 

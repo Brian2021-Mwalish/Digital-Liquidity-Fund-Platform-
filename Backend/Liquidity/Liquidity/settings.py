@@ -25,7 +25,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    # Third party
+    # Third-party
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",
@@ -35,8 +35,10 @@ INSTALLED_APPS = [
     "payment",
     "withdrawal",
     "rentals",
+    "support",
 ]
 
+# -------------------
 # Google OAuth
 GOOGLE_CLIENT_ID = config("GOOGLE_CLIENT_ID", default="YOUR_GOOGLE_CLIENT_ID")
 
@@ -151,28 +153,33 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [FRONTEND_URL] if not DEBUG else []
 
 # -------------------
-# 📧 Gmail SMTP (for password reset & notifications)
+# 📧 Gmail SMTP
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
 EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
 EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
-EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="mwalish2021@gmail.com")
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER)
 
 # -------------------
-# M-PESA Config
-MPESA_ENV = config("MPESA_ENV", default="sandbox")
-MPESA_BASE_URL = config("MPESA_BASE_URL", default="https://sandbox.safaricom.co.ke")
+# 💰 M-PESA Configuration
+# Switch between 'sandbox' and 'production' easily
+MPESA_ENV = config("MPESA_ENV", default="production")
+
+MPESA_BASE_URL = (
+    "https://sandbox.safaricom.co.ke"
+    if MPESA_ENV == "sandbox"
+    else "https://api.safaricom.co.ke"
+)
+
 MPESA_CONSUMER_KEY = config("MPESA_CONSUMER_KEY", default="")
 MPESA_CONSUMER_SECRET = config("MPESA_CONSUMER_SECRET", default="")
-
-# 🔐 STK Push credentials
 MPESA_SHORTCODE = config("MPESA_SHORTCODE", default="")
 MPESA_PASSKEY = config("MPESA_PASSKEY", default="")
 MPESA_CALLBACK_URL = config("MPESA_CALLBACK_URL", default="")
 
-# Optional B2C / reversals
+# Optional B2C / Reversals
 MPESA_INITIATOR_NAME = config("MPESA_INITIATOR_NAME", default="")
 MPESA_INITIATOR_PASSWORD = config("MPESA_INITIATOR_PASSWORD", default="")
 
