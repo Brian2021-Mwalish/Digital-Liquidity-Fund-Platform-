@@ -6,6 +6,7 @@ const Contact = ({ isDashboard = false, isAdmin = false }) => {
   const [formData, setFormData] = useState({ name: '', email: '', message: '' });
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [replyStates, setReplyStates] = useState({});
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
 
@@ -19,7 +20,7 @@ const Contact = ({ isDashboard = false, isAdmin = false }) => {
     setLoading(true);
     const token = localStorage.getItem('access');
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/support/', {
+      const response = await fetch('http://127.0.0.1:8000/api/support/messages/', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json',
@@ -35,6 +36,59 @@ const Contact = ({ isDashboard = false, isAdmin = false }) => {
       console.error('Error fetching messages:', error);
     }
     setLoading(false);
+  };
+
+  const updateMessage = (id, updates) => {
+    setMessages(prev => prev.map(msg => msg.id === id ? { ...msg, ...updates } : msg));
+  };
+
+  const handleReplyChange = (id, reply) => {
+    setReplyStates(prev => ({ ...prev, [id]: reply }));
+  };
+
+  const handleReplySubmit = async (id) => {
+    const reply = replyStates[id];
+    if (!reply) return;
+    const token = localStorage.getItem('access');
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/support/messages/${id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reply }),
+      });
+      if (response.ok) {
+        updateMessage(id, { reply });
+        setReplyStates(prev => ({ ...prev, [id]: '' }));
+      } else {
+        console.error('Failed to send reply');
+      }
+    } catch (error) {
+      console.error('Error sending reply:', error);
+    }
+  };
+
+  const handleMarkAsRead = async (id) => {
+    const token = localStorage.getItem('access');
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/support/messages/${id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ is_read: true }),
+      });
+      if (response.ok) {
+        updateMessage(id, { is_read: true });
+      } else {
+        console.error('Failed to mark as read');
+      }
+    } catch (error) {
+      console.error('Error marking as read:', error);
+    }
   };
 
   const handleInputChange = (e) => {
@@ -53,7 +107,7 @@ const Contact = ({ isDashboard = false, isAdmin = false }) => {
       if (isDashboard) {
         // For dashboard, submit to platform API
         const token = localStorage.getItem('access');
-        const response = await fetch('http://127.0.0.1:8000/api/support/', {
+        const response = await fetch('http://127.0.0.1:8000/api/support/messages/', {
           method: 'POST',
           body: data,
           headers: {
@@ -264,9 +318,47 @@ const Contact = ({ isDashboard = false, isAdmin = false }) => {
                             <p className="text-white font-semibold">{msg.name}</p>
                             <p className="text-gray-400 text-sm">{msg.email}</p>
                           </div>
-                          <span className="text-xs text-gray-500">{new Date(msg.created_at).toLocaleDateString()}</span>
+                          <div className="flex items-center space-x-2">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${msg.is_read ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                              {msg.is_read ? 'Read' : 'Unread'}
+                            </span>
+                            <span className="text-xs text-gray-500">{new Date(msg.created_at).toLocaleDateString()}</span>
+                          </div>
                         </div>
-                        <p className="text-gray-300">{msg.message}</p>
+                        <p className="text-gray-300 mb-4">{msg.message}</p>
+                        {msg.reply && (
+                          <div className="bg-green-100 rounded-lg p-3 mb-4">
+                            <p className="text-green-800 font-semibold text-sm">Admin Reply:</p>
+                            <p className="text-green-700">{msg.reply}</p>
+                          </div>
+                        )}
+                        <div className="flex items-center space-x-2">
+                          {!msg.is_read && (
+                            <button
+                              onClick={() => handleMarkAsRead(msg.id)}
+                              className="px-3 py-1 text-xs font-medium rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+                            >
+                              Mark as Read
+                            </button>
+                          )}
+                          {!msg.reply && (
+                            <div className="flex-1 flex space-x-2">
+                              <textarea
+                                value={replyStates[msg.id] || ''}
+                                onChange={(e) => handleReplyChange(msg.id, e.target.value)}
+                                placeholder="Type your reply..."
+                                className="flex-1 px-3 py-1 text-sm bg-white/10 border border-white/20 rounded-md text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                rows={2}
+                              />
+                              <button
+                                onClick={() => handleReplySubmit(msg.id)}
+                                className="px-3 py-1 text-xs font-medium rounded-md bg-green-500 text-white hover:bg-green-600 transition-colors"
+                              >
+                                Reply
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

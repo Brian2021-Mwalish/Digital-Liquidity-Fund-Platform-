@@ -11,8 +11,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # -------------------
 # Security
 SECRET_KEY = config("DJANGO_SECRET_KEY", default="your-secret-key")
-DEBUG = config("DEBUG", default=True, cast=bool)
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="*").split(",")
+DEBUG = config("DEBUG", default=False, cast=bool)
+
+# Allow both main domain and API subdomain
+ALLOWED_HOSTS = [
+    "liquiinvestke.co.ke",
+    "www.liquiinvestke.co.ke",
+    "api.liquiinvestke.co.ke",
+    "127.0.0.1",
+    "localhost",
+]
 
 # -------------------
 # Installed apps
@@ -37,10 +45,6 @@ INSTALLED_APPS = [
     "rentals",
     "support",
 ]
-
-# -------------------
-# Google OAuth
-GOOGLE_CLIENT_ID = config("GOOGLE_CLIENT_ID", default="YOUR_GOOGLE_CLIENT_ID")
 
 # -------------------
 # Middleware
@@ -82,9 +86,9 @@ WSGI_APPLICATION = "Liquidity.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DB_NAME", default="Liquidity"),
-        "USER": config("DB_USER", default="postgres"),
-        "PASSWORD": config("DB_PASSWORD", default="12345678"),
+        "NAME": config("DB_NAME", default="cpanelusername_dbname"),
+        "USER": config("DB_USER", default="cpanelusername_dbuser"),
+        "PASSWORD": config("DB_PASSWORD", default=""),
         "HOST": config("DB_HOST", default="localhost"),
         "PORT": config("DB_PORT", default="5432"),
     }
@@ -147,10 +151,11 @@ SIMPLE_JWT = {
 
 # -------------------
 # CORS settings
-FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:5173")
-CORS_ALLOW_ALL_ORIGINS = DEBUG  # True in dev, restrict in production
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [FRONTEND_URL] if not DEBUG else []
+CORS_ALLOWED_ORIGINS = [
+    "https://liquiinvestke.co.ke",
+    "https://www.liquiinvestke.co.ke",
+]
 
 # -------------------
 # 📧 Gmail SMTP
@@ -164,7 +169,6 @@ DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER)
 
 # -------------------
 # 💰 M-PESA Configuration
-# Switch between 'sandbox' and 'production' easily
 MPESA_ENV = config("MPESA_ENV", default="production")
 
 MPESA_BASE_URL = (
@@ -179,19 +183,15 @@ MPESA_SHORTCODE = config("MPESA_SHORTCODE", default="")
 MPESA_PASSKEY = config("MPESA_PASSKEY", default="")
 MPESA_CALLBACK_URL = config("MPESA_CALLBACK_URL", default="")
 
-# Optional B2C / Reversals
 MPESA_INITIATOR_NAME = config("MPESA_INITIATOR_NAME", default="")
 MPESA_INITIATOR_PASSWORD = config("MPESA_INITIATOR_PASSWORD", default="")
 
-# Helper for Authorization header (Base64 encoded)
 MPESA_BASE64_ENCODED_CREDENTIALS = base64.b64encode(
     f"{MPESA_CONSUMER_KEY}:{MPESA_CONSUMER_SECRET}".encode()
 ).decode()
 
-# Timestamp for STK Push (YYYYMMDDHHMMSS)
 MPESA_TIMESTAMP = datetime.now().strftime("%Y%m%d%H%M%S")
 
-# Password for STK Push
 MPESA_PASSWORD = base64.b64encode(
     f"{MPESA_SHORTCODE}{MPESA_PASSKEY}{MPESA_TIMESTAMP}".encode()
 ).decode()

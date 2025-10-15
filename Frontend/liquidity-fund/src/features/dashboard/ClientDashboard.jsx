@@ -72,6 +72,23 @@ const ClientDashboard = () => {
     }
   };
 
+  const fetchUserRentals = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/rentals/user-rentals/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setActiveRentals(data.rentals || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch user rentals:', error);
+    }
+  };
+
   const initiateMpesaPayment = async (phone, currencyCode) => {
     try {
       const response = await apiCall('/mpesa/initiate/', {
@@ -81,7 +98,7 @@ const ClientDashboard = () => {
           currency: currencyCode
         })
       });
-      
+
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || 'Payment initiation failed');
@@ -98,12 +115,12 @@ const ClientDashboard = () => {
         method: 'POST',
         body: JSON.stringify({ currency: currencyCode })
       });
-      
+
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || 'Payment failed');
       }
-      
+
       setBalance(data.new_balance);
       return data;
     } catch (error) {
@@ -150,14 +167,7 @@ const ClientDashboard = () => {
         if (balance !== initialBalance) {
           clearInterval(pollInterval);
           // Balance updated from backend after deduction
-          const newRental = {
-            id: Date.now(),
-            currency: selectedCurrency,
-            amount: selectedCurrency.price,
-            expectedReturn: selectedCurrency.price * 2,
-            status: 'active'
-          };
-          setActiveRentals([...activeRentals, newRental]);
+          await fetchUserRentals(); // Fetch updated rentals
           setShowPaymentModal(false);
           setActiveTab('rentals');
           setPaymentStatus('');
@@ -187,6 +197,7 @@ const ClientDashboard = () => {
     if (token) {
       fetchBalance();
       fetchPaymentHistory();
+      fetchUserRentals(); // Fetch rentals on load
       // Fetch stats from backend
       const fetchStats = async () => {
         try {
@@ -300,8 +311,8 @@ const ClientDashboard = () => {
               <StatCard title="Doubled Money" value={`KES ${doubledMoney.toLocaleString()}`} subtitle="Money doubled from rentals" bgColor="bg-emerald-50 border-emerald-200" />
             </div>
             <div className="mt-6">
-              <Link 
-                to="/withdraw" 
+              <Link
+                to="/withdraw"
                 className="inline-flex items-center px-6 py-3 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-all"
               >
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -333,13 +344,13 @@ const ClientDashboard = () => {
           <div className="space-y-6">
             <div>
               <h2 className="text-3xl font-bold mb-2 text-gray-800">Rent Currency</h2>
-              <p className="text-gray-600">Choose a currency to rent and double your investment in 24 hours</p>
+              <p className="text-gray-600">Choose a currency to rent and double your investment in 20 days</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {currencies.map((currency, index) => {
                 const colors = ['bg-green-500', 'bg-emerald-500', 'bg-teal-500', 'bg-green-600', 'bg-emerald-600', 'bg-teal-600'];
                 return (
-                  <div key={currency.code} className="bg-white border border-gray-200 rounded-xl shadow-lg p-6 text-center hover:shadow-xl hover:scale-105 transition-all cursor-pointer" 
+                  <div key={currency.code} className="bg-white border border-gray-200 rounded-xl shadow-lg p-6 text-center hover:shadow-xl hover:scale-105 transition-all cursor-pointer"
                        onClick={() => { setSelectedCurrency(currency); setShowPaymentModal(true); }}>
                     <div className="text-4xl mb-3 font-bold text-gray-800">{currency.code}</div>
                     <h3 className="text-lg font-semibold text-gray-700 mb-4">{currency.name}</h3>
@@ -370,13 +381,50 @@ const ClientDashboard = () => {
                   <div key={rental.id} className="bg-white border border-gray-200 rounded-xl shadow-lg p-6">
                     <div className="flex flex-col md:flex-row items-center gap-6">
                       <div className="text-center">
-                        <div className="text-xl font-bold text-gray-800">{rental.currency.name}</div>
-                        <div className="text-sm text-green-600 font-medium">Status: Active</div>
+                        <div className="text-xl font-bold text-gray-800">{rental.currency}</div>
+                        <div className="text-sm text-green-600 font-medium">Status: {rental.status}</div>
+                        {rental.status === 'active' && (
+                          <div className="mt-2">
+                            <div className="flex flex-col items-center">
+                              <div className="animate-spin">
+                                <svg className="w-8 h-8 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/>
+                                </svg>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">Money doubling in progress</p>
+                              <p className="text-xs text-green-600 font-medium">Unique Process: {rental.unique_id}</p>
+                              {(() => {
+                                const startDate = new Date(rental.start_date);
+                                const endDate = new Date(rental.end_date);
+                                const now = new Date();
+                                const totalDuration = endDate - startDate;
+                                const elapsed = now - startDate;
+                                const progress = Math.min((elapsed / totalDuration) * 100, 100);
+                                return (
+                                  <div className="w-full mt-2">
+                                    <div className="bg-gray-200 rounded-full h-2">
+                                      <div
+                                        className="bg-green-600 h-2 rounded-full transition-all duration-1000"
+                                        style={{ width: `${progress}%` }}
+                                      ></div>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-1 text-center">
+                                      {Math.round(progress)}% towards doubling
+                                    </p>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                        )}
                       </div>
                       <div className="flex-1 text-center md:text-left">
                         <div className="space-y-1 text-sm">
                           <div className="text-gray-600">Investment: <span className="font-medium text-gray-800">KES {rental.amount}</span></div>
-                          <div className="text-gray-600">Expected Return: <span className="font-medium text-green-600">KES {rental.expectedReturn}</span></div>
+                          <div className="text-gray-600">Expected Return: <span className="font-medium text-green-600">KES {rental.expected_return}</span></div>
+                          <div className="text-gray-600">Duration: <span className="font-medium text-gray-800">{rental.duration_days} days</span></div>
+                          <div className="text-gray-600">End Date: <span className="font-medium text-gray-800">{new Date(rental.end_date).toLocaleDateString()}</span></div>
+                          <div className="text-gray-600">Unique ID: <span className="font-medium text-gray-800">{rental.unique_id}</span></div>
                         </div>
                       </div>
                     </div>
@@ -453,7 +501,7 @@ const ClientDashboard = () => {
   if (!profile) return <div>Loading profile...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-green-500/40 flex flex-col">
       {/* Header with green gradient */}
       <header className="bg-gradient-to-r from-green-900 via-emerald-900 to-teal-900 border-b border-gray-800 shadow-2xl sticky top-0 z-40">
         <div className="px-6 py-4 flex items-center justify-between">
@@ -511,16 +559,16 @@ const ClientDashboard = () => {
           <nav className="p-4 space-y-2">
             {navItems.map((item) => (
               item.link ? (
-                <Link 
-                  key={item.id} 
+                <Link
+                  key={item.id}
                   to={item.link}
                   className="w-full text-left px-4 py-3 rounded-xl transition-all font-medium hover:bg-gray-100 text-gray-700 block"
                 >
                   {item.label}
                 </Link>
               ) : (
-                <button 
-                  key={item.id} 
+                <button
+                  key={item.id}
                   onClick={() => setActiveTab(item.id)}
                   className={`w-full text-left px-4 py-3 rounded-xl transition-all font-medium ${
                     activeTab === item.id ? 'bg-green-600 text-white shadow-lg' : 'hover:bg-gray-100 text-gray-700'
@@ -563,12 +611,12 @@ const ClientDashboard = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                <input 
-                  type="tel" 
-                  placeholder="07........" 
+                <input
+                  type="tel"
+                  placeholder="07........"
                   value={phoneNumber}
                   onChange={handlePhoneChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent" 
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 />
                 {phoneError && <p className="text-red-500 text-xs mt-1">{phoneError}</p>}
                 <p className="text-xs text-gray-500 mt-1">Enter your 10-digit phone number starting with 0</p>
@@ -580,7 +628,7 @@ const ClientDashboard = () => {
                 </div>
               )}
               <div className="flex gap-3">
-                <button 
+                <button
                   onClick={handlePayment}
                   disabled={isLoading || !phoneNumber || phoneNumber.length !== 10}
                   className="flex-1 bg-green-600 text-white py-3 rounded-lg font-medium disabled:opacity-50 hover:bg-green-700 transition-all"

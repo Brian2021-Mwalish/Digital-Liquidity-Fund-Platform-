@@ -19,3 +19,28 @@ class PendingReturnsView(APIView):
         ).aggregate(total=Sum("expected_return"))["total"] or 0
 
         return Response({"pending_returns": float(total_pending_returns)}, status=status.HTTP_200_OK)
+
+
+class UserRentalsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """
+        Returns all rentals for the authenticated user with full details.
+        """
+        rentals = Rental.objects.filter(user=request.user).order_by("-created_at")
+        rental_data = []
+        for rental in rentals:
+            rental_data.append({
+                "id": rental.id,
+                "unique_id": str(rental.unique_id),
+                "currency": rental.currency,
+                "amount": float(rental.amount),
+                "expected_return": float(rental.expected_return),
+                "status": rental.status,
+                "duration_days": rental.duration_days,
+                "created_at": rental.created_at.isoformat(),
+                "end_date": rental.end_date.isoformat() if rental.end_date else None,
+            })
+
+        return Response({"rentals": rental_data}, status=status.HTTP_200_OK)

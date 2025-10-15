@@ -1,9 +1,18 @@
-# Maintenance Notification Task
+# TODO: Update Rental Duration to 20 Days
 
-## Steps to Complete
-- [x] Add MaintenanceStatusView in Backend/Liquidity/support/views.py
-- [x] Add URL pattern for maintenance status in Backend/Liquidity/support/urls.py
-- [x] Modify ClientDashboard.jsx to fetch maintenance status and display red notification
-- [x] Test the API endpoint
-- [x] Test the frontend notification
-- [x] Allow admins to access AdminDashboard during maintenance by modifying RequireAuth.jsx
+## Backend Changes
+- [x] Add `duration_days`, `end_date`, and `unique_id` fields to Rental model
+- [x] Run migrations for new fields
+- [x] Update payment/views.py to set end_date and unique_id when creating rental
+- [x] Create management command to complete rentals after 20 days
+- [x] Update rentals/views.py to include new fields in responses
+
+## Frontend Changes
+- [x] Update ClientDashboard.jsx text from "24 hours" to "20 days"
+- [x] Add display for rental duration, end_date, and unique_id in rentals tab
+- [x] Add unique process indicator (loading circular, mining animation) for active rentals
+
+## Testing
+- [x] Test rental creation with new duration
+- [x] Test management command for completing rentals
+- [ ] Test frontend display and uniqueness indicator

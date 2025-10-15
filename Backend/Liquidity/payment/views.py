@@ -174,6 +174,7 @@ class MpesaPaymentView(APIView):
                 amount=amount,
                 expected_return=amount * 2,
                 status="active",
+                duration_days=20,
             )
 
             return Response({"new_balance": float(wallet.balance)}, status=status.HTTP_200_OK)
@@ -232,6 +233,7 @@ class MpesaCallbackView(APIView):
                 amount=amount,
                 expected_return=amount * 2,
                 status="active",
+                duration_days=20,
             )
 
             # Optional: Referral reward (if user was referred)

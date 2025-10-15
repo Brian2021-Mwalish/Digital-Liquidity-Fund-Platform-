@@ -4,11 +4,107 @@ import {
   FileCheck, MessageSquare, Settings, Shield, Activity, LogOut, UserX,
   CheckCircle, Eye, Filter, MoreHorizontal, DollarSign, Clock, Check, XCircle
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { apiFetch } from '../../lib/api';
 import Contact from '../../components/Contact';
 
 
 const AdminDashboard = () => {
+  // Particles component for floating background animation
+  const Particles = () => {
+    const particles = Array.from({ length: 20 }, (_, i) => i);
+
+    return (
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {particles.map((particle) => (
+          <motion.div
+            key={particle}
+            className="absolute w-2 h-2 bg-white/20 rounded-full"
+            initial={{
+              x: Math.random() * window.innerWidth,
+              y: Math.random() * window.innerHeight,
+              scale: 0,
+            }}
+            animate={{
+              x: Math.random() * window.innerWidth,
+              y: Math.random() * window.innerHeight,
+              scale: [0, 1, 0],
+            }}
+            transition={{
+              duration: Math.random() * 10 + 10,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  // Waves component for animated wave background
+  const Waves = () => {
+    return (
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <svg
+          className="absolute bottom-0 w-full h-64"
+          viewBox="0 0 1440 320"
+          preserveAspectRatio="none"
+        >
+          <motion.path
+            fill="rgba(255, 255, 255, 0.1)"
+            d="M0,160 Q360,200 720,160 T1440,160 V320 H0 Z"
+            animate={{
+              d: [
+                "M0,160 Q360,200 720,160 T1440,160 V320 H0 Z",
+                "M0,180 Q360,140 720,180 T1440,180 V320 H0 Z",
+                "M0,160 Q360,200 720,160 T1440,160 V320 H0 Z"
+              ]
+            }}
+            transition={{
+              duration: 8,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+          <motion.path
+            fill="rgba(255, 255, 255, 0.05)"
+            d="M0,200 Q360,240 720,200 T1440,200 V320 H0 Z"
+            animate={{
+              d: [
+                "M0,200 Q360,240 720,200 T1440,200 V320 H0 Z",
+                "M0,220 Q360,180 720,220 T1440,220 V320 H0 Z",
+                "M0,200 Q360,240 720,200 T1440,200 V320 H0 Z"
+              ]
+            }}
+            transition={{
+              duration: 10,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 2
+            }}
+          />
+          <motion.path
+            fill="rgba(255, 255, 255, 0.03)"
+            d="M0,240 Q360,280 720,240 T1440,240 V320 H0 Z"
+            animate={{
+              d: [
+                "M0,240 Q360,280 720,240 T1440,240 V320 H0 Z",
+                "M0,260 Q360,220 720,260 T1440,260 V320 H0 Z",
+                "M0,240 Q360,280 720,240 T1440,240 V320 H0 Z"
+              ]
+            }}
+            transition={{
+              duration: 12,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 4
+            }}
+          />
+        </svg>
+      </div>
+    );
+  };
+
   // State and constants
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('overview');
@@ -998,35 +1094,49 @@ const AdminDashboard = () => {
   );
 
   return (
-    <div className="min-h-screen bg-green-50 flex">
+    <div className="min-h-screen bg-green-600/60 flex relative">
+      <Particles />
+      <Waves />
+      {/* Sidebar Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
       {/* Sidebar */}
-      <aside className={`bg-white shadow-lg w-64 min-h-screen p-6 transition-all duration-300 ${sidebarOpen ? '' : 'hidden md:block'}`}>
+      <aside className={`bg-green-900 shadow-lg w-64 min-h-screen p-6 transition-all duration-300 ${sidebarOpen ? '' : 'hidden md:block'}`}>
         <div className="flex items-center justify-between mb-8">
-          <span className="text-2xl font-bold text-green-700">Admin</span>
-          <button className="md:hidden" onClick={() => setSidebarOpen(false)}><X size={24} /></button>
+          <span className="text-2xl font-bold text-white">Admin</span>
+          <button className="md:hidden text-white hover:text-green-200" onClick={() => setSidebarOpen(false)}><X size={24} /></button>
         </div>
         <nav className="space-y-2">
           {menuItems.map(item => (
             <button
               key={item.id}
-              className={`w-full flex items-center px-4 py-2 rounded-lg text-green-900 hover:bg-green-100 transition-colors font-medium ${activeSection === item.id ? 'bg-green-100' : ''}`}
+              className={`w-full flex items-center px-4 py-3 rounded-lg text-white hover:bg-green-700 transition-colors font-medium ${activeSection === item.id ? 'bg-green-800' : ''}`}
               onClick={() => setActiveSection(item.id)}
             >
               <item.icon size={20} className="mr-3" />
               {item.label}
-              {item.count !== null && <span className="ml-auto text-xs bg-green-200 text-green-800 rounded-full px-2 py-0.5">{item.count}</span>}
+              {item.count !== null && <span className="ml-auto text-xs bg-green-600 text-white rounded-full px-2 py-0.5">{item.count}</span>}
             </button>
           ))}
         </nav>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-8">
+      <main className="flex-1 p-4 md:p-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-green-700">Admin Dashboard</h1>
-            <p className="text-green-600">Welcome, {adminData.username}</p>
+          <div className="flex items-center">
+            <button className="md:hidden text-green-700 hover:text-green-900 mr-4" onClick={() => setSidebarOpen(true)}>
+              <Menu size={24} />
+            </button>
+            <div>
+              <h1 className="text-3xl font-bold text-green-700">Admin Dashboard</h1>
+              <p className="text-green-600">Welcome, {adminData.username}</p>
+            </div>
           </div>
           <div className="flex items-center space-x-4">
             <button className="bg-green-100 text-green-700 px-4 py-2 rounded-lg font-medium" onClick={handleLogout}><LogOut size={18} className="inline mr-2" />Logout</button>

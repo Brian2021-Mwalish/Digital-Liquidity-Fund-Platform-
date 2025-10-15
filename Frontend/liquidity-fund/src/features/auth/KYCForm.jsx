@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const API_BASE_URL = "http://localhost:8000/api";
 
 const KYCForm = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -17,9 +19,9 @@ const KYCForm = () => {
   const [success, setSuccess] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
 
-  // Simulate navigation back to dashboard
+  // Navigate back to dashboard
   const handleBackClick = () => {
-    console.log('Navigate to dashboard');
+    navigate('/client-dashboard');
   };
 
   // Fetch profile info and KYC info from backend
