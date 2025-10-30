@@ -1,66 +1,79 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-
-const API_BASE_URL = "http://localhost:8000/api";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../../lib/api";
 
 const KYCForm = () => {
   const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
-    full_name: '',
-    email: '',
-    phone: '',
-    id_number: '',
-    date_of_birth: '',
-    address: '',
+    full_name: "",
+    email: "",
+    phone: "",
+    id_number: "",
+    date_of_birth: "",
+    address: "",
   });
+
+  const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-  const [focusedField, setFocusedField] = useState(null);
 
-  // Navigate back to dashboard
   const handleBackClick = () => {
-    navigate('/client-dashboard');
+    navigate("/client-dashboard");
   };
 
-  // Fetch profile info and KYC info from backend
+  const getToken = () => {
+    return (
+      localStorage.getItem("access") ||
+      localStorage.getItem("token") ||
+      localStorage.getItem("accessToken")
+    );
+  };
+
   useEffect(() => {
     const fetchProfileAndKYC = async () => {
       setFetching(true);
       setError(null);
+
       try {
-        const token = localStorage.getItem("access");
-        
-        // Fetch profile
-        const profileRes = await fetch(`${API_BASE_URL}/profile/`, {
+        const token = getToken();
+        if (!token) throw new Error("You are not logged in. Please log in again.");
+
+        const profileRes = await fetch(`${API_BASE_URL}/api/profile/`, {
           headers: {
-            "Authorization": `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         });
-        if (!profileRes.ok) throw new Error('Failed to fetch profile.');
+
+        if (profileRes.status === 401) {
+          throw new Error("Session expired. Please log in again.");
+        }
+
+        if (!profileRes.ok) throw new Error("Failed to load user profile.");
         const profile = await profileRes.json();
 
-        // Fetch KYC
-        const kycRes = await fetch(`${API_BASE_URL}/kyc/`, {
+        const kycRes = await fetch(`${API_BASE_URL}/api/kyc/`, {
           headers: {
-            "Authorization": `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         });
+
         let kyc = {};
         if (kycRes.ok) {
           kyc = await kycRes.json();
         }
 
         setFormData({
-          full_name: profile.full_name || '',
-          email: profile.email || '',
-          phone: profile.phone_number || '',
-          id_number: kyc.national_id || '',
-          date_of_birth: kyc.date_of_birth || '',
-          address: kyc.address || '',
+          full_name: profile.full_name || "",
+          email: profile.email || "",
+          phone: profile.phone_number || "",
+          id_number: kyc.national_id || "",
+          date_of_birth: kyc.date_of_birth || "",
+          address: kyc.address || "",
         });
       } catch (e) {
         setError(e.message);
@@ -68,29 +81,82 @@ const KYCForm = () => {
         setFetching(false);
       }
     };
+
     fetchProfileAndKYC();
   }, []);
 
+  const validateField = (name, value) => {
+    let errorMsg = "";
+    
+    switch(name) {
+      case "full_name":
+        if (!value.trim()) errorMsg = "Full name is required";
+        else if (value.trim().length < 2) errorMsg = "Name must be at least 2 characters";
+        break;
+      case "email":
+        if (!value.trim()) errorMsg = "Email is required";
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) errorMsg = "Invalid email format";
+        break;
+      case "phone":
+        if (value && !/^[\d\s+()-]+$/.test(value)) errorMsg = "Invalid phone format";
+        break;
+      case "id_number":
+        if (value && value.length < 5) errorMsg = "ID number seems too short";
+        break;
+      case "date_of_birth":
+        if (value) {
+          const age = new Date().getFullYear() - new Date(value).getFullYear();
+          if (age < 18) errorMsg = "You must be at least 18 years old";
+          else if (age > 120) errorMsg = "Invalid date of birth";
+        }
+        break;
+    }
+    
+    return errorMsg;
+  };
+
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    
+    const errorMsg = validateField(name, value);
+    setFieldErrors(prev => ({
+      ...prev,
+      [name]: errorMsg
+    }));
+    
     setSuccess(false);
     setError(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate all fields
+    const errors = {};
+    Object.keys(formData).forEach(key => {
+      const errorMsg = validateField(key, formData[key]);
+      if (errorMsg) errors[key] = errorMsg;
+    });
+    
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setError("Please fix the errors in the form");
+      return;
+    }
+    
     setLoading(true);
     setSuccess(false);
     setError(null);
 
     try {
-      const token = localStorage.getItem("access");
-      
-      // Update Profile info (full_name, email, phone)
-      const profileRes = await fetch(`${API_BASE_URL}/profile/`, {
-        method: 'PUT',
+      const token = getToken();
+      if (!token) throw new Error("You are not logged in.");
+
+      const profileRes = await fetch(`${API_BASE_URL}/api/profile/`, {
+        method: "PUT",
         headers: {
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -99,26 +165,30 @@ const KYCForm = () => {
           phone_number: formData.phone,
         }),
       });
-      if (!profileRes.ok) throw new Error('Failed to update profile.');
 
-      // Update KYC info
-      const kycRes = await fetch(`${API_BASE_URL}/kyc/`, {
-        method: 'PUT',
+      if (profileRes.status === 401) throw new Error("Session expired. Please log in again.");
+      if (!profileRes.ok) throw new Error("Failed to update profile.");
+
+      const kycRes = await fetch(`${API_BASE_URL}/api/kyc/`, {
+        method: "PUT",
         headers: {
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          national_id: formData.id_number,   // ✅ rename here
+          national_id: formData.id_number,
           date_of_birth: formData.date_of_birth,
           address: formData.address,
         }),
       });
-      if (!kycRes.ok) throw new Error('Failed to update KYC profile.');
+
+      if (kycRes.status === 401) throw new Error("Session expired. Please log in again.");
+      if (!kycRes.ok) throw new Error("Failed to update KYC details.");
 
       setSuccess(true);
+      setFieldErrors({});
     } catch (e) {
-      setError(e.message || 'Failed to update profile.');
+      setError(e.message || "Error updating KYC details.");
     } finally {
       setLoading(false);
     }
@@ -126,334 +196,402 @@ const KYCForm = () => {
 
   if (fetching) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-green-100 to-emerald-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-green-100 to-green-200 p-4 animate-in fade-in duration-500">
         <div className="text-center">
-          <div className="relative w-16 h-16 mx-auto mb-4">
+          <div className="relative w-20 h-20 mx-auto mb-6">
             <div className="absolute inset-0 rounded-full border-4 border-green-200 animate-pulse"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-green-600 animate-spin"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-green-800 animate-spin"></div>
           </div>
-          <p className="text-green-700 font-medium animate-pulse">Loading KYC profile...</p>
+          <p className="text-green-800 text-lg font-semibold animate-pulse">
+            Loading your KYC profile...
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-green-100 to-emerald-50 py-4 px-4 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-green-200/40 to-green-300/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-gradient-to-tr from-green-200/30 to-emerald-200/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 h-60 bg-gradient-to-r from-green-100/30 to-emerald-100/20 rounded-full blur-3xl animate-pulse delay-500"></div>
-        
-        {/* Floating particles */}
-        <div className="absolute top-16 left-16 w-3 h-3 bg-green-400 rounded-full animate-float opacity-60"></div>
-        <div className="absolute top-32 right-24 w-2 h-2 bg-green-500 rounded-full animate-float delay-700 opacity-70"></div>
-        <div className="absolute bottom-24 left-1/4 w-4 h-4 bg-green-300 rounded-full animate-float delay-1000 opacity-50"></div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-green-100 to-green-200 py-4 sm:py-8 md:py-12 px-3 sm:px-6 lg:px-8 animate-in fade-in duration-700">
+      <div className="max-w-6xl mx-auto">
+        {/* Header Section */}
+        <div className="mb-6 sm:mb-8 animate-in slide-in-from-top-4 duration-500 delay-200">
+          <button
+            type="button"
+            onClick={handleBackClick}
+            className="inline-flex items-center text-green-800 hover:text-green-600 font-medium transition-all mb-4 group hover:scale-105"
+          >
+            <svg className="w-5 h-5 mr-2 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Dashboard
+          </button>
 
-      <div className="relative z-10 max-w-4xl mx-auto">
-        <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl border border-green-200/30 p-6 transform transition-all duration-700 hover:shadow-2xl animate-slide-up">
-          
-          {/* Header Section */}
-          <div className="flex items-center justify-between mb-6">
-            <button
-              onClick={handleBackClick}
-              className="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-xl shadow-lg font-semibold hover:bg-green-700 hover:shadow-xl transition-all duration-300 hover:scale-105"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                <path d="M15 19l-7-7 7-7" />
-              </svg>
-              Dashboard
-            </button>
-
-            <div className="text-center">
-              <div className="inline-block p-3 rounded-full bg-gradient-to-r from-green-500 to-green-600 mb-2 shadow-lg">
-                <svg width="24" height="24" fill="white" viewBox="0 0 24 24">
-                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                </svg>
-              </div>
-              <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-green-700 bg-clip-text text-transparent">
-                KYC Profile
-              </h2>
-              <p className="text-gray-600 font-medium">Complete your identity verification</p>
-            </div>
-
-            <div className="w-20"></div>
-          </div>
-
-          {/* Status Messages */}
-          {error && (
-            <div className="mb-4 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 font-medium text-center">
-              <div className="flex items-center justify-center gap-2">
-                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
-                </svg>
-                <span>{error}</span>
-              </div>
-            </div>
-          )}
-          
-          {success && (
-            <div className="mb-4 p-4 rounded-xl bg-green-50 border border-green-200 text-green-700 font-semibold text-center">
-              <div className="flex items-center justify-center gap-2">
-                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                </svg>
-                <span>Profile updated successfully!</span>
-              </div>
-            </div>
-          )}
-
-          {/* Form Section */}
-          <div onSubmit={handleSubmit} className="space-y-6">
-            {/* Personal Information Row */}
-            <div className="bg-green-50/50 p-5 rounded-xl">
-              <h3 className="text-lg font-bold text-green-800 mb-4 flex items-center gap-2">
-                <div className="p-1 rounded-full bg-green-200">
-                  <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-green-200 p-4 sm:p-6 md:p-8 hover:shadow-2xl transition-shadow duration-300">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-start sm:items-center space-x-3">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-green-800 to-green-600 rounded-xl flex items-center justify-center shadow-lg shrink-0 animate-pulse">
+                  <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
-                Personal Information
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="group">
-                  <label className="block mb-2 font-semibold text-gray-700 text-sm">Full Name</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="full_name"
-                      value={formData.full_name}
-                      onChange={handleChange}
-                      onFocus={() => setFocusedField('full_name')}
-                      onBlur={() => setFocusedField(null)}
-                      className={`w-full px-4 py-3 border-2 rounded-xl font-medium transition-all duration-300 focus:ring-2 focus:ring-green-200 focus:border-green-500 hover:border-green-300 shadow-sm ${
-                        focusedField === 'full_name' ? 'bg-green-50 border-green-500' : 'bg-white hover:bg-green-25'
-                      }`}
-                      placeholder="Enter your full name"
-                      required
-                    />
-                    {focusedField === 'full_name' && (
-                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-ping"></div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="group">
-                  <label className="block mb-2 font-semibold text-gray-700 text-sm">Email Address</label>
-                  <div className="relative">
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      onFocus={() => setFocusedField('email')}
-                      onBlur={() => setFocusedField(null)}
-                      className={`w-full px-4 py-3 border-2 rounded-xl font-medium transition-all duration-300 focus:ring-2 focus:ring-green-200 focus:border-green-500 hover:border-green-300 shadow-sm ${
-                        focusedField === 'email' ? 'bg-green-50 border-green-500' : 'bg-white hover:bg-green-25'
-                      }`}
-                      placeholder="Enter your email address"
-                      required
-                    />
-                    {focusedField === 'email' && (
-                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-ping"></div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="group">
-                  <label className="block mb-2 font-semibold text-gray-700 text-sm">Phone Number</label>
-                  <div className="relative">
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      onFocus={() => setFocusedField('phone')}
-                      onBlur={() => setFocusedField(null)}
-                      className={`w-full px-4 py-3 border-2 rounded-xl font-medium transition-all duration-300 focus:ring-2 focus:ring-green-200 focus:border-green-500 hover:border-green-300 shadow-sm ${
-                        focusedField === 'phone' ? 'bg-green-50 border-green-500' : 'bg-white hover:bg-green-25'
-                      }`}
-                      placeholder="07xxxxxxxx"
-                      required
-                    />
-                    {focusedField === 'phone' && (
-                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-ping"></div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="group">
-                  <label className="block mb-2 font-semibold text-gray-700 text-sm">Date of Birth</label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      name="date_of_birth"
-                      value={formData.date_of_birth}
-                      onChange={handleChange}
-                      onFocus={() => setFocusedField('date_of_birth')}
-                      onBlur={() => setFocusedField(null)}
-                      className={`w-full px-4 py-3 border-2 rounded-xl font-medium transition-all duration-300 focus:ring-2 focus:ring-green-200 focus:border-green-500 hover:border-green-300 shadow-sm ${
-                        focusedField === 'date_of_birth' ? 'bg-green-50 border-green-500' : 'bg-white hover:bg-green-25'
-                      }`}
-                      required
-                    />
-                    {focusedField === 'date_of_birth' && (
-                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-ping"></div>
-                    )}
-                  </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-green-800 animate-in slide-in-from-left-4 duration-500 delay-300">KYC Verification</h1>
+                  <p className="text-green-600 text-sm sm:text-base mt-1 animate-in slide-in-from-left-4 duration-500 delay-400">Know Your Customer Identity Verification</p>
                 </div>
               </div>
-            </div>
 
-            {/* Identity & Address Row */}
-            <div className="bg-green-50/50 p-5 rounded-xl">
-              <h3 className="text-lg font-bold text-green-800 mb-4 flex items-center gap-2">
-                <div className="p-1 rounded-full bg-green-200">
-                  <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 2 2h8c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H6V4h8v16z"/>
+              <div className="flex items-center space-x-2 text-sm animate-in slide-in-from-right-4 duration-500 delay-500">
+                <div className="flex items-center space-x-1 bg-green-100 text-green-800 px-3 py-1.5 rounded-full border border-green-200">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                   </svg>
+                  <span className="font-semibold">Secure</span>
                 </div>
-                Identity & Address
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="group">
-                  <label className="block mb-2 font-semibold text-gray-700 text-sm">National ID / Passport</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="id_number"
-                      value={formData.id_number}
-                      onChange={handleChange}
-                      onFocus={() => setFocusedField('id_number')}
-                      onBlur={() => setFocusedField(null)}
-                      className={`w-full px-4 py-3 border-2 rounded-xl font-medium transition-all duration-300 focus:ring-2 focus:ring-green-200 focus:border-green-500 hover:border-green-300 shadow-sm ${
-                        focusedField === 'id_number' ? 'bg-green-50 border-green-500' : 'bg-white hover:bg-green-25'
-                      }`}
-                      placeholder="ID or Passport Number"
-                      required
-                    />
-                    {focusedField === 'id_number' && (
-                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-ping"></div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="group">
-                  <label className="block mb-2 font-semibold text-gray-700 text-sm">Residential Address</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleChange}
-                      onFocus={() => setFocusedField('address')}
-                      onBlur={() => setFocusedField(null)}
-                      className={`w-full px-4 py-3 border-2 rounded-xl font-medium transition-all duration-300 focus:ring-2 focus:ring-green-200 focus:border-green-500 hover:border-green-300 shadow-sm ${
-                        focusedField === 'address' ? 'bg-green-50 border-green-500' : 'bg-white hover:bg-green-25'
-                      }`}
-                      placeholder="Your residential address"
-                      required
-                    />
-                    {focusedField === 'address' && (
-                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-ping"></div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            <div className="pt-4">
-              <button
-                onClick={handleSubmit}
-                disabled={loading}
-                className="w-full group relative overflow-hidden bg-gradient-to-r from-green-600 to-green-700 text-white py-4 rounded-xl font-bold text-lg transition-all duration-500 hover:from-green-700 hover:to-green-800 hover:-translate-y-1 hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-lg"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-green-700 to-green-800 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="relative z-10 flex items-center justify-center gap-3">
-                  {loading ? (
-                    <>
-                      <div className="relative w-5 h-5">
-                        <div className="absolute inset-0 rounded-full border-2 border-white/30"></div>
-                        <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-white animate-spin"></div>
-                      </div>
-                      <span className="animate-pulse">Updating Profile...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" className="group-hover:rotate-12 transition-transform duration-300">
-                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                      </svg>
-                      <span>Save Profile</span>
-                      <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" className="group-hover:translate-x-1 transition-transform duration-300">
-                        <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
-                      </svg>
-                    </>
-                  )}
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* Security Note */}
-          <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-green-50 to-green-100 border border-green-200">
-            <div className="flex items-center gap-3 text-green-700">
-              <div className="p-2 rounded-full bg-green-200 shadow-sm">
-                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
-                </svg>
-              </div>
-              <div>
-                <span className="font-bold">Your information is secure and encrypted</span>
-                <p className="text-sm text-green-600">Protected with bank-level security standards</p>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Info Banner */}
+        <div className="mb-6 bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 rounded-xl p-4 sm:p-6">
+          <div className="flex items-start space-x-3">
+            <div className="shrink-0 w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-primary-foreground" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-foreground mb-1">Why do we need this information?</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                KYC (Know Your Customer) verification helps us comply with financial regulations, prevent fraud, 
+                and ensure the security of your account. Your information is encrypted and stored securely according 
+                to industry standards and data protection laws.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Alert Messages */}
+        {error && (
+          <div className="mb-6 bg-destructive/10 border-l-4 border-destructive rounded-lg shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="p-4 flex items-start">
+              <svg className="w-5 h-5 text-destructive mt-0.5 mr-3 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <p className="text-destructive font-medium text-sm sm:text-base">{error}</p>
+            </div>
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-6 bg-success/10 border-l-4 border-success rounded-lg shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="p-4 flex items-start">
+              <svg className="w-5 h-5 text-success mt-0.5 mr-3 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <p className="text-success font-semibold text-sm sm:text-base">KYC details updated successfully!</p>
+                <p className="text-success/80 text-sm mt-0.5">Your information has been securely saved.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
+          {/* Main Form */}
+          <div className="lg:col-span-2">
+            <div className="bg-card/95 backdrop-blur-sm rounded-2xl shadow-xl border border-border overflow-hidden">
+              <div className="bg-gradient-to-r from-primary to-accent px-4 sm:px-6 md:px-8 py-4">
+                <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-primary-foreground">Personal Information</h2>
+              </div>
+
+              <form onSubmit={handleSubmit} className="p-4 sm:p-6 md:p-8">
+                <div className="space-y-5 sm:space-y-6">
+                  {/* Full Name */}
+                  <div>
+                    <label className="block text-sm font-semibold text-foreground mb-2">
+                      Full Legal Name <span className="text-destructive">*</span>
+                    </label>
+                    <input
+                      name="full_name"
+                      value={formData.full_name}
+                      onChange={handleChange}
+                      className={`w-full border-2 ${fieldErrors.full_name ? 'border-destructive focus:border-destructive' : 'border-input focus:border-green-500'} focus:ring-4 focus:ring-green-500/10 rounded-lg px-4 py-3 transition-all outline-none text-foreground bg-background placeholder:text-muted-foreground`}
+                      placeholder="John Doe Smith"
+                      required
+                    />
+                    {fieldErrors.full_name && (
+                      <p className="mt-1.5 text-sm text-destructive flex items-center">
+                        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        {fieldErrors.full_name}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Email & Phone */}
+                  <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-foreground mb-2">
+                        Email Address <span className="text-destructive">*</span>
+                      </label>
+                      <input
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        type="email"
+                        className={`w-full border-2 ${fieldErrors.email ? 'border-destructive focus:border-destructive' : 'border-input focus:border-primary'} focus:ring-4 focus:ring-primary/10 rounded-lg px-4 py-3 transition-all outline-none text-foreground bg-background placeholder:text-muted-foreground`}
+                        placeholder="john@example.com"
+                        required
+                      />
+                      {fieldErrors.email && (
+                        <p className="mt-1.5 text-sm text-destructive flex items-center">
+                          <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          {fieldErrors.email}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-foreground mb-2">
+                        Phone Number
+                      </label>
+                      <input
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        className={`w-full border-2 ${fieldErrors.phone ? 'border-destructive focus:border-destructive' : 'border-input focus:border-primary'} focus:ring-4 focus:ring-primary/10 rounded-lg px-4 py-3 transition-all outline-none text-foreground bg-background placeholder:text-muted-foreground`}
+                        placeholder="+1 (555) 000-0000"
+                      />
+                      {fieldErrors.phone && (
+                        <p className="mt-1.5 text-sm text-destructive flex items-center">
+                          <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          {fieldErrors.phone}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ID Number & DOB */}
+                  <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-foreground mb-2">
+                        National ID / Passport Number
+                      </label>
+                      <input
+                        name="id_number"
+                        value={formData.id_number}
+                        onChange={handleChange}
+                        className={`w-full border-2 ${fieldErrors.id_number ? 'border-destructive focus:border-destructive' : 'border-input focus:border-primary'} focus:ring-4 focus:ring-primary/10 rounded-lg px-4 py-3 transition-all outline-none text-foreground bg-background placeholder:text-muted-foreground`}
+                        placeholder="Enter ID or passport number"
+                      />
+                      {fieldErrors.id_number && (
+                        <p className="mt-1.5 text-sm text-destructive flex items-center">
+                          <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          {fieldErrors.id_number}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-foreground mb-2">
+                        Date of Birth
+                      </label>
+                      <input
+                        type="date"
+                        name="date_of_birth"
+                        value={formData.date_of_birth}
+                        onChange={handleChange}
+                        max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
+                        className={`w-full border-2 ${fieldErrors.date_of_birth ? 'border-destructive focus:border-destructive' : 'border-input focus:border-primary'} focus:ring-4 focus:ring-primary/10 rounded-lg px-4 py-3 transition-all outline-none text-foreground bg-background`}
+                      />
+                      {fieldErrors.date_of_birth && (
+                        <p className="mt-1.5 text-sm text-destructive flex items-center">
+                          <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          {fieldErrors.date_of_birth}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Address */}
+                  <div>
+                    <label className="block text-sm font-semibold text-foreground mb-2">
+                      Residential Address
+                    </label>
+                    <textarea
+                      name="address"
+                      value={formData.address}
+                      onChange={handleChange}
+                      rows={3}
+                      className={`w-full border-2 ${fieldErrors.address ? 'border-destructive focus:border-destructive' : 'border-input focus:border-primary'} focus:ring-4 focus:ring-primary/10 rounded-lg px-4 py-3 transition-all outline-none text-foreground bg-background placeholder:text-muted-foreground resize-none`}
+                      placeholder="Street address, apartment/unit number, city, postal code"
+                    />
+                    {fieldErrors.address && (
+                      <p className="mt-1.5 text-sm text-destructive flex items-center">
+                        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        {fieldErrors.address}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-8 pt-6 border-t border-border">
+                  <button
+                    type="button"
+                    onClick={handleBackClick}
+                    className="sm:order-1 px-6 py-3 bg-green-100 hover:bg-green-200 text-green-800 font-semibold rounded-lg transition-all shadow-sm hover:shadow-md"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="sm:order-2 flex-1 px-8 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg"
+                  >
+                    {loading ? (
+                      <span className="flex items-center justify-center">
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Saving Changes...
+                      </span>
+                    ) : (
+                      <span className="flex items-center justify-center">
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Save KYC Information
+                      </span>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          {/* Sidebar Info */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Security Info */}
+            <div className="bg-card/95 backdrop-blur-sm rounded-xl shadow-lg border border-border p-5">
+              <div className="flex items-center space-x-2 mb-4">
+                <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <svg className="w-6 h-6 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-foreground">Data Security</h3>
+              </div>
+              <ul className="space-y-3 text-sm text-muted-foreground">
+                <li className="flex items-start">
+                  <svg className="w-5 h-5 text-primary mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  256-bit SSL encryption
+                </li>
+                <li className="flex items-start">
+                  <svg className="w-5 h-5 text-primary mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  GDPR compliant storage
+                </li>
+                <li className="flex items-start">
+                  <svg className="w-5 h-5 text-primary mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  No data sold to third parties
+                </li>
+                <li className="flex items-start">
+                  <svg className="w-5 h-5 text-primary mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Regular security audits
+                </li>
+              </ul>
+            </div>
+
+            {/* Verification Benefits */}
+            <div className="bg-card/95 backdrop-blur-sm rounded-xl shadow-lg border border-border p-5">
+              <div className="flex items-center space-x-2 mb-4">
+                <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center">
+                  <svg className="w-6 h-6 text-accent" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-foreground">Verification Benefits</h3>
+              </div>
+              <ul className="space-y-3 text-sm text-muted-foreground">
+                <li className="flex items-start">
+                  <svg className="w-5 h-5 text-accent mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Higher transaction limits
+                </li>
+                <li className="flex items-start">
+                  <svg className="w-5 h-5 text-accent mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Enhanced account security
+                </li>
+                <li className="flex items-start">
+                  <svg className="w-5 h-5 text-accent mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Access to premium features
+                </li>
+                <li className="flex items-start">
+                  <svg className="w-5 h-5 text-accent mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  Priority customer support
+                </li>
+              </ul>
+            </div>
+
+            {/* Help Section */}
+            <div className="bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl border border-primary/20 p-5">
+              <div className="flex items-center space-x-2 mb-3">
+                <svg className="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                </svg>
+                <h3 className="font-semibold text-foreground">Need Help?</h3>
+              </div>
+              <p className="text-sm text-muted-foreground mb-3">
+                If you have questions about the KYC process, our support team is here to assist you.
+              </p>
+              <a href="/support" className="inline-flex items-center text-sm font-semibold text-primary hover:text-accent transition-colors">
+                Contact Support
+                <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Info */}
+        <div className="mt-8 text-center">
+          <div className="inline-flex items-center space-x-2 text-sm text-muted-foreground bg-card/50 backdrop-blur-sm px-4 py-2 rounded-full border border-border">
+            <svg className="w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+            </svg>
+            <span>All information is encrypted and securely stored</span>
+          </div>
+        </div>
       </div>
-
-      <style jsx>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-8px); }
-        }
-        
-        @keyframes fade-in {
-          0% { opacity: 0; transform: translateY(15px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes slide-up {
-          0% { opacity: 0; transform: translateY(20px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-        
-        .animate-float {
-          animation: float 3s ease-in-out infinite;
-        }
-        
-        .animate-fade-in {
-          animation: fade-in 0.6s ease-out forwards;
-        }
-
-        .animate-slide-up {
-          animation: slide-up 0.8s ease-out forwards;
-        }
-        
-        .hover\\:bg-green-25:hover {
-          background-color: rgba(34, 197, 94, 0.025);
-        }
-
-        .delay-100 { animation-delay: 0.1s; }
-        .delay-300 { animation-delay: 0.3s; }
-        .delay-500 { animation-delay: 0.5s; }
-        .delay-700 { animation-delay: 0.7s; }
-        .delay-1000 { animation-delay: 1s; }
-      `}</style>
     </div>
   );
 };

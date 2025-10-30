@@ -5,6 +5,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import toast from "react-hot-toast";
 import { Eye, EyeOff, Loader2, CheckCircle, AlertCircle, User, Mail, Lock, ArrowLeft } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
+import { apiFetch } from "../../lib/api";
 
 const schema = yup.object().shape({
   full_name: yup
@@ -39,6 +40,7 @@ const Register = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const {
     register,
@@ -82,9 +84,11 @@ const Register = () => {
       payload.referral_code = referralCode;
     }
     try {
-      const res = await fetch("http://localhost:8000/api/auth/register/", {
+      const res = await fetch("https://liquiinvestke.co.ke/backend/api/auth/register/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
@@ -133,13 +137,13 @@ const Register = () => {
       } else {
         // Success
         toast.dismiss("register");
+        setSuccessMessage("Registration Successful! Please Login");
         setShowSuccessModal(true);
         setLoading(false);
       }
     } catch (error) {
-      setShowSuccessModal(true);
       const errorMessage = error.message || "We're experiencing technical difficulties. Please try again.";
-      toast.error(errorMessage, { 
+      toast.error(errorMessage, {
         id: "register",
         duration: 5000,
         icon: <AlertCircle className="text-red-500" />
@@ -151,7 +155,7 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-2"
+    <div className="min-h-screen w-full flex items-center justify-center p-2 sm:p-4 md:p-6"
       style={{
         background: "linear-gradient(135deg, #e6f4ea 0%, #b7e4c7 50%, #1b4332 100%)",
       }}
@@ -159,7 +163,7 @@ const Register = () => {
       {/* Uniquely styled, bold, and highly visible Back Arrow */}
       <Link
         to="/"
-        className="fixed top-6 left-6 flex items-center gap-3 px-5 py-3 rounded-full shadow-2xl z-50 font-bold text-lg"
+        className="fixed top-4 left-4 sm:top-6 sm:left-6 flex items-center gap-2 sm:gap-3 px-3 py-2 sm:px-4 sm:py-3 rounded-full shadow-2xl z-50 font-bold text-sm sm:text-base"
         style={{
           background: "linear-gradient(90deg, #1b4332 70%, #b7e4c7 100%)",
           color: "#fff",
@@ -168,37 +172,37 @@ const Register = () => {
           letterSpacing: "0.03em"
         }}
       >
-        <ArrowLeft size={28} style={{ strokeWidth: 3 }} />
+        <ArrowLeft size={18} className="sm:w-6 sm:h-6" style={{ strokeWidth: 3 }} />
         <span style={{ fontWeight: 700, textShadow: "0 2px 8px #14532d55" }}>Back to Home</span>
       </Link>
 
-      <div className="w-full max-w-4xl lg:max-w-5xl xl:max-w-6xl space-y-6 sm:space-y-8 md:space-y-10 animate-fade-in">
-       
+      <div className="w-full max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-5xl space-y-4 sm:space-y-6 md:space-y-8 animate-fade-in">
+
 
         {/* Header */}
         <div className="text-center transform transition-all duration-300 hover:scale-105">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent animate-pulse">
+          <h1 className="text-xl md:text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent animate-pulse">
             Join Liquidity Investments
           </h1>
-          <p className="mt-2 sm:mt-3 text-sm sm:text-base text-green-700 transition-colors duration-300 hover:text-green-900 max-w-md mx-auto">
+          <p className="mt-2 sm:mt-3 text-xs md:text-sm sm:text-base text-green-700 transition-colors duration-300 hover:text-green-900 max-w-md mx-auto">
             Create your account and start your investment journey with us today
           </p>
         </div>
 
         {/* Main Form Container */}
-        <div className="bg-white/80 backdrop-blur-lg rounded-2xl sm:rounded-3xl shadow-2xl border border-green-200 p-4 sm:p-6 md:p-8 lg:p-10 transform transition-all duration-500 hover:shadow-3xl hover:-translate-y-1 mx-auto max-w-3xl">
+        <div className="bg-white/80 backdrop-blur-lg rounded-2xl sm:rounded-3xl shadow-2xl border border-green-200 p-3 md:p-4 sm:p-6 md:p-8 lg:p-10 transform transition-all duration-500 hover:shadow-3xl hover:-translate-y-1 mx-auto max-w-3xl">
           
           {/* Welcome Message */}
-          <div className="text-center mb-6 sm:mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full mb-4">
-              <User className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+          <div className="text-center mb-4 md:mb-6 sm:mb-8">
+            <div className="inline-flex items-center justify-center w-12 h-12 md:w-16 md:h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full mb-4">
+              <User className="w-6 h-6 md:w-8 md:h-8 sm:w-10 sm:h-10 text-white" />
             </div>
-            <h2 className="text-xl sm:text-2xl font-semibold text-green-900 mb-2">Create Your Account</h2>
-            <p className="text-sm sm:text-base text-green-700">Please fill in your details to get started</p>
+            <h2 className="text-lg md:text-xl sm:text-2xl font-semibold text-green-900 mb-2">Create Your Account</h2>
+            <p className="text-xs md:text-sm sm:text-base text-green-700">Please fill in your details to get started</p>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 md:space-y-5 sm:space-y-6">
             {/* Full Name Field */}
             <div className="space-y-2">
               <label className="flex items-center gap-2 mb-2 font-semibold text-green-700 text-sm sm:text-base">
@@ -402,11 +406,11 @@ const Register = () => {
               <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
                 <CheckCircle className="w-12 h-12 text-white" />
               </div>
-              <h2 className="text-3xl font-extrabold text-gray-900 mb-4">Registration Successful !!!</h2>
+              <h2 className="text-3xl font-extrabold text-gray-900 mb-4">{successMessage}</h2>
               <p className="text-gray-800 mb-8 text-lg font-medium">Please Login to continue your investment journey.</p>
               <button
                 onClick={() => navigate("/login")}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-4 px-8 rounded-2xl font-bold text-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-110 shadow-xl hover:shadow-2xl"
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-4 px-8 rounded-2xl font-bold text-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-300 transform hover:scale-110 shadow-xl hover:shadow-2xl"
               >
                 Go to Login
               </button>

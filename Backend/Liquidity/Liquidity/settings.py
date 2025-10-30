@@ -1,31 +1,29 @@
 import os
 from pathlib import Path
-from decouple import config
 from datetime import timedelta, datetime
 import base64
+from decouple import config
 
-# -------------------
-# Paths
+# ------------------------------------------------------------
+# BASE DIRECTORY
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# -------------------
-# Security
+# ------------------------------------------------------------
+# SECURITY
 SECRET_KEY = config("DJANGO_SECRET_KEY", default="your-secret-key")
 DEBUG = config("DEBUG", default=False, cast=bool)
 
-# Allow both main domain and API subdomain
+# Allowed hosts for your domain
 ALLOWED_HOSTS = [
     "liquiinvestke.co.ke",
     "www.liquiinvestke.co.ke",
-    "api.liquiinvestke.co.ke",
     "127.0.0.1",
     "localhost",
 ]
 
-# -------------------
-# Installed apps
+# ------------------------------------------------------------
+# INSTALLED APPS
 INSTALLED_APPS = [
-    # Django core
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -33,7 +31,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    # Third-party
+    # Third party
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",
@@ -46,10 +44,10 @@ INSTALLED_APPS = [
     "support",
 ]
 
-# -------------------
-# Middleware
+# ------------------------------------------------------------
+# MIDDLEWARE
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",  # Must be first
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -59,8 +57,8 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-# -------------------
-# URL config
+# ------------------------------------------------------------
+# URLS & WSGI
 ROOT_URLCONF = "Liquidity.urls"
 
 TEMPLATES = [
@@ -81,8 +79,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "Liquidity.wsgi.application"
 
-# -------------------
-# Database (PostgreSQL)
+# ------------------------------------------------------------
+# DATABASE — PostgreSQL
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -94,8 +92,8 @@ DATABASES = {
     }
 }
 
-# -------------------
-# Password validation
+# ------------------------------------------------------------
+# AUTH & PASSWORD VALIDATION
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -103,32 +101,30 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# -------------------
-# Internationalization
+AUTH_USER_MODEL = "Users.CustomUser"
+
+# ------------------------------------------------------------
+# INTERNATIONALIZATION
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "Africa/Nairobi"
 USE_I18N = True
 USE_TZ = True
 
-# -------------------
-# Static & Media
+# ------------------------------------------------------------
+# STATIC & MEDIA FILES
+# Static files are collected in one folder after `collectstatic`
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [BASE_DIR / "static"] if (BASE_DIR / "static").exists() else []
+
+# If you also have some dev static files:
+if (BASE_DIR / "static").exists():
+    STATICFILES_DIRS = [BASE_DIR / "static"]
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# -------------------
-# Default primary key
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-# -------------------
-# Custom user
-AUTH_USER_MODEL = "Users.CustomUser"
-
-# -------------------
-# Django REST Framework + JWT
+# ------------------------------------------------------------
+# REST FRAMEWORK & JWT
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -138,27 +134,27 @@ REST_FRAMEWORK = {
     ],
 }
 
-# -------------------
-# Simple JWT settings
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
-    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
 }
 
-# -------------------
-# CORS settings
+# ------------------------------------------------------------
+# CORS SETTINGS
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "https://liquiinvestke.co.ke",
     "https://www.liquiinvestke.co.ke",
 ]
 
-# -------------------
-# 📧 Gmail SMTP
+# If you want to allow any origin temporarily during testing
+# CORS_ALLOW_ALL_ORIGINS = True
+
+# ------------------------------------------------------------
+# EMAIL (GMAIL SMTP)
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
 EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
@@ -167,22 +163,19 @@ EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER)
 
-# -------------------
-# 💰 M-PESA Configuration
+# ------------------------------------------------------------
+# M-PESA CONFIG
 MPESA_ENV = config("MPESA_ENV", default="production")
-
 MPESA_BASE_URL = (
     "https://sandbox.safaricom.co.ke"
     if MPESA_ENV == "sandbox"
     else "https://api.safaricom.co.ke"
 )
-
 MPESA_CONSUMER_KEY = config("MPESA_CONSUMER_KEY", default="")
 MPESA_CONSUMER_SECRET = config("MPESA_CONSUMER_SECRET", default="")
 MPESA_SHORTCODE = config("MPESA_SHORTCODE", default="")
 MPESA_PASSKEY = config("MPESA_PASSKEY", default="")
 MPESA_CALLBACK_URL = config("MPESA_CALLBACK_URL", default="")
-
 MPESA_INITIATOR_NAME = config("MPESA_INITIATOR_NAME", default="")
 MPESA_INITIATOR_PASSWORD = config("MPESA_INITIATOR_PASSWORD", default="")
 
@@ -196,8 +189,8 @@ MPESA_PASSWORD = base64.b64encode(
     f"{MPESA_SHORTCODE}{MPESA_PASSKEY}{MPESA_TIMESTAMP}".encode()
 ).decode()
 
-# -------------------
-# Logging
+# ------------------------------------------------------------
+# LOGGING
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -209,3 +202,14 @@ LOGGING = {
         "level": "DEBUG" if DEBUG else "INFO",
     },
 }
+
+# ------------------------------------------------------------
+# SECURITY HEADERS (Optional but good practice)
+CSRF_TRUSTED_ORIGINS = [
+    "https://liquiinvestke.co.ke",
+    "https://www.liquiinvestke.co.ke",
+]
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG

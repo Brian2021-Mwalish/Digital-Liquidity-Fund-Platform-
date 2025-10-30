@@ -7,6 +7,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import toast from "react-hot-toast";
 import { Mail, Send, CheckCircle, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
+import { API_BASE_URL } from "../../lib/api";
 
 const schema = yup.object().shape({
   email: yup.string().email("Invalid email format").required("Email is required"),
@@ -60,7 +61,7 @@ const ForgotPassword = () => {
 
   const onSubmit = async (data) => {
     try {
-      const res = await fetch("http://localhost:8000/api/auth/forgot-password/", {
+      const res = await fetch(`${API_BASE_URL}/api/auth/forgot-password/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -83,9 +84,9 @@ const ForgotPassword = () => {
 
   const handleResendEmail = async () => {
     if (!sentEmail) return;
-    
+
     try {
-      const res = await fetch("http://localhost:8000/api/auth/forgot-password/", {
+      const res = await fetch(`${API_BASE_URL}/api/auth/forgot-password/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: sentEmail }),

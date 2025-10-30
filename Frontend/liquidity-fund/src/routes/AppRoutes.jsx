@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Routes, Route, useLocation, useParams, useNavigate } from "react-router-dom";
 // Referral redirect component
 const ReferralRedirect = () => {
@@ -10,6 +10,7 @@ const ReferralRedirect = () => {
   return null;
 };
 import { AnimatePresence, motion } from "framer-motion";
+import LoadingScreen from "../components/LoadingScreen";
 
 // Pages
 import LandingPage from "../pages/LandingPage";
@@ -82,6 +83,17 @@ const PageWrapper = ({ children }) => (
 
 const AppRoutes = () => {
   const location = useLocation();
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => setIsLoading(false), 500); // Simulate loading time for navigation
+    return () => clearTimeout(timer);
+  }, [location.pathname]);
+
+  if (isLoading) {
+    return <LoadingScreen message="Navigating..." subMessage="Please wait while we load the page" />;
+  }
 
   return (
     <AnimatePresence mode="wait">

@@ -7,6 +7,7 @@ import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import toast from "react-hot-toast";
 import { Lock, Eye, EyeOff, CheckCircle, Key, ArrowLeft, Shield } from "lucide-react";
+import { API_BASE_URL } from "../../lib/api";
 
 const schema = yup.object().shape({
   password: yup
@@ -60,7 +61,7 @@ const ResetPassword = () => {
 
   const validateToken = async () => {
     try {
-      const res = await fetch(`http://localhost:8000/api/auth/reset-password/${uidb64}/${token}/`, {
+      const res = await fetch(`${API_BASE_URL}/api/auth/reset-password/${uidb64}/${token}/`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
       });
@@ -100,7 +101,7 @@ const ResetPassword = () => {
 
   const onSubmit = async (data) => {
     try {
-      const res = await fetch(`http://localhost:8000/api/auth/reset-password/${uidb64}/${token}/`, {
+      const res = await fetch(`${API_BASE_URL}/api/auth/reset-password/${uidb64}/${token}/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

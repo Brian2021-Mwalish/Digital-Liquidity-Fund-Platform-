@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, useInView } from 'framer-motion';
+import { API_BASE_URL, apiFetch } from '../lib/api';
 
 const Contact = ({ isDashboard = false, isAdmin = false }) => {
   const [status, setStatus] = useState('Send Message');
@@ -18,14 +19,8 @@ const Contact = ({ isDashboard = false, isAdmin = false }) => {
 
   const fetchMessages = async () => {
     setLoading(true);
-    const token = localStorage.getItem('access');
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/support/messages/', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
-        },
-      });
+      const response = await apiFetch('/api/support/messages/');
       if (response.ok) {
         const data = await response.json();
         setMessages(data.messages || []);
@@ -49,14 +44,9 @@ const Contact = ({ isDashboard = false, isAdmin = false }) => {
   const handleReplySubmit = async (id) => {
     const reply = replyStates[id];
     if (!reply) return;
-    const token = localStorage.getItem('access');
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/support/messages/${id}/`, {
+      const response = await apiFetch(`/api/support/messages/${id}/`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ reply }),
       });
       if (response.ok) {
@@ -71,14 +61,9 @@ const Contact = ({ isDashboard = false, isAdmin = false }) => {
   };
 
   const handleMarkAsRead = async (id) => {
-    const token = localStorage.getItem('access');
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/support/messages/${id}/`, {
+      const response = await apiFetch(`/api/support/messages/${id}/`, {
         method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ is_read: true }),
       });
       if (response.ok) {
@@ -106,14 +91,9 @@ const Contact = ({ isDashboard = false, isAdmin = false }) => {
     try {
       if (isDashboard) {
         // For dashboard, submit to platform API
-        const token = localStorage.getItem('access');
-        const response = await fetch('http://127.0.0.1:8000/api/support/messages/', {
+        const response = await apiFetch('/api/support/messages/', {
           method: 'POST',
           body: data,
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
-          },
         });
         if (response.ok) {
           setStatus('Message Sent!');

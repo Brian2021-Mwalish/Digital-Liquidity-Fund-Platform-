@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+import { API_BASE_URL } from "../lib/api";
 
 export function useSessionTracker() {
   const [sessions, setSessions] = useState([]);

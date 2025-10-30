@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Search, Bell, ChevronDown, Menu, X, BarChart3, Users, Home, CreditCard,
+  Search, Menu, X, BarChart3, Users, Home, CreditCard,
   FileCheck, MessageSquare, Settings, Shield, Activity, LogOut, UserX,
-  CheckCircle, Eye, Filter, MoreHorizontal, DollarSign, Clock, Check, XCircle
+  CheckCircle, Eye, Filter, MoreHorizontal, DollarSign, Clock, XCircle
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { apiFetch } from '../../lib/api';
+import { API_BASE_URL } from '../../lib/api';
 import Contact from '../../components/Contact';
 
 
@@ -135,19 +135,21 @@ const AdminDashboard = () => {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [systemStatus, setSystemStatus] = useState('online');
   const [settingsLoading, setSettingsLoading] = useState(false);
-  const API_BASE_URL = 'http://127.0.0.1:8000/api';
-  const menuItems = [
+  const [rentals, setRentals] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [menuItems, setMenuItems] = useState([
     { id: 'overview', label: 'Overview', icon: BarChart3, count: null },
     { id: 'users', label: 'Users', icon: Users, count: users.length },
     { id: 'withdrawals', label: 'Withdrawals', icon: DollarSign, count: withdrawals.filter(w => w.status === 'pending').length },
     { id: 'referrals', label: 'Referrals', icon: CheckCircle, count: referrals.length },
-    { id: 'rentals', label: 'Rentals', icon: Home, count: 89 },
-    { id: 'transactions', label: 'Transactions', icon: CreditCard, count: null },
+    { id: 'rentals', label: 'Rentals', icon: Home, count: 0 },
+    { id: 'transactions', label: 'Transactions', icon: CreditCard, count: 0 },
     { id: 'kyc', label: 'KYC Verifications', icon: FileCheck, count: 12 },
     { id: 'support', label: 'Support', icon: MessageSquare, count: 7 },
     { id: 'settings', label: 'Settings', icon: Settings, count: null },
-    { id: 'audit', label: 'Audit Logs', icon: Shield, count: null }
-  ];
+    { id: 'audit', label: 'Audit Logs', icon: Shield, count: 0 }
+  ]);
 
   // API and handler functions
   const handleApiError = (error, operation) => {
@@ -169,7 +171,12 @@ const AdminDashboard = () => {
         window.location.href = '/login';
         return;
       }
-      const usersRes = await apiFetch(`${API_BASE_URL}/auth/users/`);
+      const usersRes = await fetch(`${API_BASE_URL}/api/auth/users/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       if (usersRes.ok) {
         const usersData = await usersRes.json();
         const usersArray = Array.isArray(usersData) ? usersData : usersData.results || [];
@@ -189,7 +196,12 @@ const AdminDashboard = () => {
       } else {
         throw new Error(`Failed to fetch users: ${usersRes.status}`);
       }
-      const profileRes = await apiFetch(`${API_BASE_URL}/auth/profile/`);
+      const profileRes = await fetch(`${API_BASE_URL}/api/auth/profile/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       if (profileRes.ok) {
         const profileData = await profileRes.json();
         setAdminData({
@@ -209,10 +221,20 @@ const AdminDashboard = () => {
     try {
       const token = localStorage.getItem('access');
       if (!token) return;
-      const res = await apiFetch(`${API_BASE_URL}/withdraw/pending/`);
+      const res = await fetch(`${API_BASE_URL}/api/withdraw/pending/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       if (res.ok) {
         const data = await res.json();
-        const allWithdrawalsRes = await apiFetch(`${API_BASE_URL}/withdraw/all/`);
+        const allWithdrawalsRes = await fetch(`${API_BASE_URL}/api/withdraw/all/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
         let allWithdrawals = data;
         if (allWithdrawalsRes.ok) {
           allWithdrawals = await allWithdrawalsRes.json();
@@ -262,7 +284,12 @@ const AdminDashboard = () => {
         window.location.href = '/login';
         return;
       }
-      const res = await apiFetch(`${API_BASE_URL}/auth/referrals/admin/`);
+      const res = await fetch(`${API_BASE_URL}/api/auth/referrals/admin/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         setReferrals(data.referral_relationships || []);
@@ -282,7 +309,13 @@ const AdminDashboard = () => {
   // Fetch KYC forms for admin verification
   const fetchKycForms = async () => {
     setKycLoading(true);
-    const res = await apiFetch(`${API_BASE_URL}/auth/kyc/all/`);
+    const token = localStorage.getItem('access');
+    const res = await fetch(`${API_BASE_URL}/api/auth/kyc/all/`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
     if (res.ok) {
       const data = await res.json();
       setKycForms(data.kyc_forms || []);
@@ -292,8 +325,18 @@ const AdminDashboard = () => {
 
   // Verify KYC form
   const handleVerifyKyc = async (kycId) => {
-    const res = await apiFetch(`${API_BASE_URL}/auth/kyc/${kycId}/verify/`, {
-      method: "POST"
+    const token = localStorage.getItem('access');
+    if (!token) {
+      alert("Session expired. Please login again.");
+      window.location.href = '/login';
+      return;
+    }
+    const res = await fetch(`${API_BASE_URL}/api/auth/kyc/${kycId}/verify/`, {
+      method: "POST",
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
     });
     if (res.ok) {
       setKycForms(forms =>
@@ -308,11 +351,21 @@ const AdminDashboard = () => {
   const handleBlockUser = async (userId, shouldBlock) => {
     const action = shouldBlock ? 'block' : 'unblock';
     if (!confirm(`Are you sure you want to ${action} this user?`)) return;
+    const token = localStorage.getItem('access');
+    if (!token) {
+      alert("Session expired. Please login again.");
+      window.location.href = '/login';
+      return;
+    }
     try {
       setLoading(true);
       const endpoint = shouldBlock ? 'block' : 'unblock';
-      const res = await apiFetch(`${API_BASE_URL}/auth/users/${userId}/${endpoint}/`, {
-        method: 'POST'
+      const res = await fetch(`${API_BASE_URL}/api/auth/users/${userId}/${endpoint}/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
       if (res.ok) {
         setUsers(prevUsers =>
@@ -341,8 +394,12 @@ const AdminDashboard = () => {
     if (!confirm(`Are you sure you want to ${action} this withdrawal?`)) return;
     try {
       setLoading(true);
-      const res = await apiFetch(`${API_BASE_URL}/withdraw/${action}/${withdrawalId}/`, {
-        method: 'POST'
+      const res = await fetch(`${API_BASE_URL}/api/withdraw/${action}/${withdrawalId}/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
       if (res.ok) {
         await fetchWithdrawals();
@@ -365,8 +422,7 @@ const AdminDashboard = () => {
     if (!window.confirm('Award Ksh50 to this user?')) return;
     try {
       setLoading(true);
-      const token = localStorage.getItem('access');
-      const res = await fetch(`http://127.0.0.1:8000/api/auth/users/${userId}/award-wallet/`, {
+      const res = await fetch(`${API_BASE_URL}/api/auth/users/${userId}/award-wallet/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -409,7 +465,7 @@ const AdminDashboard = () => {
     try {
       const token = localStorage.getItem('access');
       if (token) {
-        await fetch(`${API_BASE_URL}/auth/logout/`, {
+        await fetch(`${API_BASE_URL}/api/auth/logout/`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -430,7 +486,12 @@ const AdminDashboard = () => {
   // Fetch settings
   const fetchSettings = async () => {
     try {
-      const res = await apiFetch(`${API_BASE_URL}/support/settings/`);
+      const res = await fetch(`${API_BASE_URL}/api/support/settings/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         setMaintenanceMode(data.maintenance_mode || false);
@@ -448,10 +509,11 @@ const AdminDashboard = () => {
     if (key === 'email_notifications') setEmailNotifications(value);
     try {
       setSettingsLoading(true);
-      const res = await apiFetch(`${API_BASE_URL}/support/settings/`, {
+      const res = await fetch(`${API_BASE_URL}/api/support/settings/`, {
         method: 'PATCH',
         headers: {
-          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ [key]: value }),
       });

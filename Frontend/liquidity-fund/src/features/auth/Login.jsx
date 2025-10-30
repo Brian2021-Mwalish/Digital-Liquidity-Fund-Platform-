@@ -7,6 +7,7 @@ import { useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Eye, EyeOff, Shield, Sparkles, User, Lock, Mail, WifiOff, ArrowLeft } from "lucide-react";
 import { GoogleLogin } from "@react-oauth/google";
+import { API_BASE_URL } from "../../lib/api";
 
 const schema = yup.object().shape({
   email: yup.string().email("Invalid email").required("Email is required"),
@@ -29,7 +30,7 @@ const Login = () => {
       localStorage.setItem("access", access);
       localStorage.setItem("refresh", refresh);
 
-      const res = await fetch("http://localhost:8000/api/auth/profile/", {
+      const res = await fetch(`${API_BASE_URL}/api/auth/profile/`, {
         headers: { Authorization: `Bearer ${access}` },
       });
       if (!res.ok) throw new Error("Failed to fetch profile");
@@ -53,7 +54,7 @@ const Login = () => {
       return;
     }
     try {
-      const res = await fetch("http://localhost:8000/api/auth/login/", {
+      const res = await fetch(`${API_BASE_URL}/api/auth/login/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -85,7 +86,7 @@ const Login = () => {
 
   const handleGoogleLogin = async (credentialResponse) => {
     try {
-      const res = await fetch("http://localhost:8000/api/auth/google-login/", {
+      const res = await fetch(`${API_BASE_URL}/api/auth/google-login/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: credentialResponse.credential }),
@@ -116,25 +117,25 @@ const Login = () => {
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-green-900 via-green-100 to-green-300 p-4">
+    <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-green-900 via-green-100 to-green-300 p-2 md:p-4">
       {/* Back Arrow at top left, outside the container */}
       <Link
         to="/"
-        className="fixed top-6 left-6 flex items-center gap-2 bg-green-900 text-green-50 px-4 py-2 rounded-full shadow-lg hover:bg-green-800 transition z-50"
+        className="fixed top-4 left-4 md:top-6 md:left-6 flex items-center gap-2 bg-green-900 text-green-50 px-3 py-2 md:px-4 md:py-2 rounded-full shadow-lg hover:bg-green-800 transition z-50"
         style={{ textDecoration: "none" }}
       >
-        <ArrowLeft size={22} />
-        <span className="font-semibold text-base">Back to Home</span>
+        <ArrowLeft size={20} className="md:w-6 md:h-6" />
+        <span className="font-semibold text-sm md:text-base">Back to Home</span>
       </Link>
-      <div className="w-full max-w-md bg-green-50/90 backdrop-blur-sm rounded-2xl shadow-lg p-6 space-y-6 border-2 border-green-900 relative">
+      <div className="w-full max-w-md bg-green-50/90 backdrop-blur-sm rounded-2xl shadow-lg p-4 md:p-6 space-y-4 md:space-y-6 border-2 border-green-900 relative">
         {/* Header */}
-        <div className="text-center mt-8">
+        <div className="text-center mt-6 md:mt-8">
           <div className="flex justify-center items-center gap-2">
-            <Shield className="text-green-900 animate-pulse" size={24} />
-            <h2 className="text-2xl font-bold text-green-900">Sign In</h2>
-            <Sparkles className="text-green-700 animate-bounce" size={20} />
+            <Shield className="text-green-900 animate-pulse w-5 h-5 md:w-6 md:h-6" />
+            <h2 className="text-xl md:text-2xl font-bold text-green-900">Sign In</h2>
+            <Sparkles className="text-green-700 animate-bounce w-4 h-4 md:w-5 md:h-5" />
           </div>
-          <p className="text-green-700 text-sm">Access your Liquidity account</p>
+          <p className="text-green-700 text-xs md:text-sm">Access your Liquidity account</p>
         </div>
 
         {/* Google Login */}

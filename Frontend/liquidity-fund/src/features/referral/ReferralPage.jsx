@@ -1,8 +1,7 @@
 // src/features/referral/ReferralPage.jsx
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+import { API_BASE_URL } from "../../lib/api";
 
 const ReferralPage = () => {
   const [referralCode, setReferralCode] = useState("");

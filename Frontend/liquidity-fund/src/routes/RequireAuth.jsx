@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { apiFetch } from "../lib/api";
+import { apiFetch, API_BASE_URL } from "../lib/api";
 
 const RequireAuth = ({ children }) => {
   const [loading, setLoading] = useState(true);
@@ -18,7 +18,7 @@ const RequireAuth = ({ children }) => {
         setIsAuth(true);
         // Fetch user profile to check admin status
         try {
-          const profileRes = await apiFetch("http://127.0.0.1:8000/api/auth/profile/");
+          const profileRes = await apiFetch("auth/profile/");
           if (profileRes.ok) {
             const profileData = await profileRes.json();
             setIsAdmin(profileData.is_staff || profileData.is_superuser || false);
@@ -28,7 +28,7 @@ const RequireAuth = ({ children }) => {
         }
         // Check maintenance mode
         try {
-          const res = await apiFetch("http://127.0.0.1:8000/api/support/maintenance/");
+          const res = await apiFetch("support/maintenance/");
           if (res.ok) {
             const data = await res.json();
             setMaintenanceMode(data.maintenance_mode || false);

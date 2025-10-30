@@ -1,18 +1,17 @@
-# TODO: Update Rental Duration to 20 Days
+# Mobile Responsiveness Update Plan
 
-## Backend Changes
-- [x] Add `duration_days`, `end_date`, and `unique_id` fields to Rental model
-- [x] Run migrations for new fields
-- [x] Update payment/views.py to set end_date and unique_id when creating rental
-- [x] Create management command to complete rentals after 20 days
-- [x] Update rentals/views.py to include new fields in responses
+## Tasks to Complete
+- [x] Update ClientDashboard.jsx for mobile responsiveness (responsive padding, font sizes, grid adjustments)
+- [x] Update Login.jsx for mobile scaling (container and elements)
+- [ ] Update Home.jsx for enhanced mobile-friendly charts and tables
+- [ ] Update Register.jsx for consistency
+- [ ] Update KYCForm.jsx for mobile layout
+- [ ] Update Withdraw.jsx for mobile
+- [ ] Update ReferralPage.jsx for mobile
+- [ ] Update other feature components as needed
+- [ ] Test responsiveness using browser dev tools
+- [ ] Run the app to verify mobile display
 
-## Frontend Changes
-- [x] Update ClientDashboard.jsx text from "24 hours" to "20 days"
-- [x] Add display for rental duration, end_date, and unique_id in rentals tab
-- [x] Add unique process indicator (loading circular, mining animation) for active rentals
-
-## Testing
-- [x] Test rental creation with new duration
-- [x] Test management command for completing rentals
-- [ ] Test frontend display and uniqueness indicator
+## Progress
+- Completed: ClientDashboard.jsx and Login.jsx mobile responsiveness
+- Started: Updating Register.jsx
