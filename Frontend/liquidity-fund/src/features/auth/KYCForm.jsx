@@ -196,13 +196,13 @@ const KYCForm = () => {
 
   if (fetching) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 via-green-100 to-green-200 p-4 animate-in fade-in duration-500">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-green-900 to-slate-800 p-4 animate-in fade-in duration-500">
         <div className="text-center">
           <div className="relative w-20 h-20 mx-auto mb-6">
             <div className="absolute inset-0 rounded-full border-4 border-green-200 animate-pulse"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-green-800 animate-spin"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-green-400 animate-spin"></div>
           </div>
-          <p className="text-green-800 text-lg font-semibold animate-pulse">
+          <p className="text-green-400 text-lg font-semibold animate-pulse">
             Loading your KYC profile...
           </p>
         </div>
@@ -211,14 +211,14 @@ const KYCForm = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-green-100 to-green-200 py-4 sm:py-8 md:py-12 px-3 sm:px-6 lg:px-8 animate-in fade-in duration-700">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-slate-800 py-4 sm:py-8 md:py-12 px-3 sm:px-6 lg:px-8 animate-in fade-in duration-700">
       <div className="max-w-6xl mx-auto">
         {/* Header Section */}
         <div className="mb-6 sm:mb-8 animate-in slide-in-from-top-4 duration-500 delay-200">
           <button
             type="button"
             onClick={handleBackClick}
-            className="inline-flex items-center text-green-800 hover:text-green-600 font-medium transition-all mb-4 group hover:scale-105"
+            className="inline-flex items-center text-green-400 hover:text-green-300 font-medium transition-all mb-4 group hover:scale-105"
           >
             <svg className="w-5 h-5 mr-2 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -226,22 +226,22 @@ const KYCForm = () => {
             Back to Dashboard
           </button>
 
-          <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-green-200 p-4 sm:p-6 md:p-8 hover:shadow-2xl transition-shadow duration-300">
+          <div className="bg-white/5 backdrop-blur-xl rounded-2xl shadow-xl border border-white/10 p-4 sm:p-6 md:p-8 hover:shadow-2xl transition-shadow duration-300">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-start sm:items-center space-x-3">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-green-800 to-green-600 rounded-xl flex items-center justify-center shadow-lg shrink-0 animate-pulse">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center shadow-lg shrink-0 animate-pulse">
                   <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-green-800 animate-in slide-in-from-left-4 duration-500 delay-300">KYC Verification</h1>
-                  <p className="text-green-600 text-sm sm:text-base mt-1 animate-in slide-in-from-left-4 duration-500 delay-400">Know Your Customer Identity Verification</p>
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white animate-in slide-in-from-left-4 duration-500 delay-300">KYC Verification</h1>
+                  <p className="text-green-400 text-sm sm:text-base mt-1 animate-in slide-in-from-left-4 duration-500 delay-400">Know Your Customer Identity Verification</p>
                 </div>
               </div>
 
               <div className="flex items-center space-x-2 text-sm animate-in slide-in-from-right-4 duration-500 delay-500">
-                <div className="flex items-center space-x-1 bg-green-100 text-green-800 px-3 py-1.5 rounded-full border border-green-200">
+                <div className="flex items-center space-x-1 bg-green-100/10 text-green-400 px-3 py-1.5 rounded-full border border-green-400/20">
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                   </svg>
@@ -300,9 +300,15 @@ const KYCForm = () => {
         <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
           {/* Main Form */}
           <div className="lg:col-span-2">
-            <div className="bg-card/95 backdrop-blur-sm rounded-2xl shadow-xl border border-border overflow-hidden">
-              <div className="bg-gradient-to-r from-primary to-accent px-4 sm:px-6 md:px-8 py-4">
-                <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-primary-foreground">Personal Information</h2>
+            <div className="bg-green-50 backdrop-blur-sm rounded-2xl shadow-xl border-2 border-green-400/30 overflow-hidden hover:border-green-400/50 transition-all duration-300">
+              <div className="bg-gradient-to-r from-green-500 to-green-600 px-4 sm:px-6 md:px-8 py-4">
+                <div className="flex items-center space-x-3">
+                  <svg className="w-6 h-6 text-white animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-white">Personal Information</h2>
+                  <span className="text-xs text-green-200 bg-green-600/20 px-2 py-1 rounded-full">Editable</span>
+                </div>
               </div>
 
               <form onSubmit={handleSubmit} className="p-4 sm:p-6 md:p-8">

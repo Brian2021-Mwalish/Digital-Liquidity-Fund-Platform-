@@ -136,9 +136,11 @@ const AppRoutes = () => {
         <Route
           path="/admin-dashboard"
           element={
-            <ErrorBoundary>
-              <PageWrapper><AdminDashboard /></PageWrapper>
-            </ErrorBoundary>
+            <RequireAuth>
+              <ErrorBoundary>
+                <PageWrapper><AdminDashboard /></PageWrapper>
+              </ErrorBoundary>
+            </RequireAuth>
           }
         />
 

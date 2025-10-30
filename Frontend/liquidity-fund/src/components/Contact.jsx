@@ -93,7 +93,7 @@ const Contact = ({ isDashboard = false, isAdmin = false }) => {
         // For dashboard, submit to platform API
         const response = await apiFetch('/api/support/messages/', {
           method: 'POST',
-          body: data,
+          body: JSON.stringify(formData),
         });
         if (response.ok) {
           setStatus('Message Sent!');

@@ -1208,28 +1208,60 @@ const AdminDashboard = () => {
         {/* Section Content */}
         {activeSection === 'overview' && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
               {stats.map((stat, idx) => (
-                <div key={idx} className="bg-white rounded-xl shadow-md p-6 border border-green-200 flex flex-col items-start">
+                <div key={idx} className="bg-white rounded-xl shadow-md p-4 md:p-6 border border-green-200 flex flex-col items-start">
                   <span className="text-green-500 text-xs font-medium mb-2">{stat.title}</span>
-                  <span className="text-2xl font-bold text-green-900">{stat.value}</span>
+                  <span className="text-xl md:text-2xl font-bold text-green-900">{stat.value}</span>
                   <span className={`mt-2 text-sm font-medium ${stat.positive ? 'text-green-600' : 'text-red-600'}`}>{stat.change}</span>
                 </div>
               ))}
             </div>
 
             {/* Pending Withdrawals Section */}
-            <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200 mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-green-700">Pending Withdrawals</h2>
+            <div className="bg-white rounded-xl shadow-md p-4 md:p-6 border border-gray-200 mb-6 md:mb-8">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                <h2 className="text-lg md:text-xl font-bold text-green-700">Pending Withdrawals</h2>
                 <button
                   onClick={() => setActiveSection('withdrawals')}
-                  className="text-green-600 hover:text-green-800 text-sm font-medium"
+                  className="text-green-600 hover:text-green-800 text-sm font-medium self-start sm:self-auto"
                 >
                   View All
                 </button>
               </div>
-              <div className="overflow-x-auto">
+              {/* Mobile Card Layout */}
+              <div className="block md:hidden space-y-4">
+                {withdrawals.filter(w => w.status === 'pending').slice(0, 5).map((withdrawal) => (
+                  <div key={withdrawal.id} className="bg-green-50 rounded-lg p-4 border border-green-200">
+                    <div className="space-y-2">
+                      <div>
+                        <span className="text-green-500 text-xs">Email</span>
+                        <div className="text-green-900 font-medium">{withdrawal.user_email || 'N/A'}</div>
+                      </div>
+                      <div>
+                        <span className="text-green-500 text-xs">Phone Number</span>
+                        <div className="text-green-900">{withdrawal.user_phone_number || withdrawal.mobile_number || 'N/A'}</div>
+                      </div>
+                      <div>
+                        <span className="text-green-500 text-xs">Amount</span>
+                        <div className="text-green-900 font-bold text-lg">Ksh {withdrawal.amount}</div>
+                      </div>
+                      <button
+                        onClick={() => handleWithdrawalAction(withdrawal.id, 'paid')}
+                        disabled={loading}
+                        className="w-full px-4 py-2 text-sm font-medium rounded-md bg-green-100 text-green-700 hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Mark as Paid
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {withdrawals.filter(w => w.status === 'pending').length === 0 && (
+                  <div className="text-center py-8 text-green-600">No pending withdrawals</div>
+                )}
+              </div>
+              {/* Desktop Table Layout */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-green-50 border-b border-green-200">
                     <tr>
