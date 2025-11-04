@@ -29,7 +29,7 @@ const Home = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const profileResponse = await apiFetch('/api/profile/');
+        const profileResponse = await apiFetch('/api/auth/profile/');
         if (profileResponse.ok) {
           const profileData = await profileResponse.json();
           setProfile(profileData);

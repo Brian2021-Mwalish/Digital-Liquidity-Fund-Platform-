@@ -254,7 +254,7 @@ const ClientDashboard = () => {
     const fetchProfile = async () => {
       const token = localStorage.getItem('access');
       try {
-        const res = await fetch(`${API_BASE_URL}/api/profile/`, {
+        const res = await fetch(`${API_BASE_URL}/api/auth/profile/`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

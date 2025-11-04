@@ -17,7 +17,7 @@ const ReferralPage = () => {
       setLoading(true);
 
       // Fetch referral code
-      const codeRes = await fetch(`${API_BASE_URL}/api/referrals/code/`, {
+      const codeRes = await fetch(`${API_BASE_URL}/api/auth/referrals/code/`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -29,7 +29,7 @@ const ReferralPage = () => {
       }
 
       // Fetch referral history (who this user referred)
-      const historyRes = await fetch(`${API_BASE_URL}/api/referrals/history/`, {
+      const historyRes = await fetch(`${API_BASE_URL}/api/auth/referrals/history/`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -41,7 +41,7 @@ const ReferralPage = () => {
       }
 
       // Fetch referrer info (who referred this user)
-      const refByRes = await fetch(`${API_BASE_URL}/api/users/profile/`, {
+      const refByRes = await fetch(`${API_BASE_URL}/api/auth/profile/`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",

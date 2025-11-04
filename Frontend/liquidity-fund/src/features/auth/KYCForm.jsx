@@ -41,7 +41,7 @@ const KYCForm = () => {
         const token = getToken();
         if (!token) throw new Error("You are not logged in. Please log in again.");
 
-        const profileRes = await fetch(`${API_BASE_URL}/api/profile/`, {
+        const profileRes = await fetch(`${API_BASE_URL}/api/auth/profile/`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",

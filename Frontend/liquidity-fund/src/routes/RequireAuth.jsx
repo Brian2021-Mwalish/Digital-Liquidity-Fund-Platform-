@@ -18,7 +18,7 @@ const RequireAuth = ({ children }) => {
         setIsAuth(true);
         // Fetch user profile to check admin status
         try {
-          const profileRes = await apiFetch("auth/profile/");
+          const profileRes = await apiFetch("/api/auth/profile/");
           if (profileRes.ok) {
             const profileData = await profileRes.json();
             setIsAdmin(profileData.is_staff || profileData.is_superuser || false);
