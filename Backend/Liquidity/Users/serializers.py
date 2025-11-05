@@ -185,10 +185,20 @@ class KYCProfileSerializer(serializers.ModelSerializer):
 # -----------------------
 class UserProfileSerializer(serializers.ModelSerializer):
     kyc = serializers.SerializerMethodField()
+    password = serializers.CharField(write_only=True, required=False)
 
     class Meta:
         model = CustomUser
-        fields = ["id", "email", "full_name", "phone_number", "kyc", "is_superuser", "wallet_balance"]
+        fields = ["id", "email", "full_name", "phone_number", "password", "kyc", "is_superuser", "wallet_balance"]
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if password:
+            instance.set_password(password)
+        instance.save()
+        return instance
 
     def get_kyc(self, obj):
         kyc = getattr(obj, "kyc", None)

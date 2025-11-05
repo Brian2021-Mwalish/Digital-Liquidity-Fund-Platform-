@@ -9,6 +9,7 @@ const KYCForm = () => {
     full_name: "",
     email: "",
     phone: "",
+    password: "",
     id_number: "",
     date_of_birth: "",
     address: "",
@@ -87,7 +88,7 @@ const KYCForm = () => {
 
   const validateField = (name, value) => {
     let errorMsg = "";
-    
+
     switch(name) {
       case "full_name":
         if (!value.trim()) errorMsg = "Full name is required";
@@ -100,6 +101,10 @@ const KYCForm = () => {
       case "phone":
         if (value && !/^[\d\s+()-]+$/.test(value)) errorMsg = "Invalid phone format";
         break;
+      case "password":
+        if (value && value.length < 8) errorMsg = "Password must be at least 8 characters";
+        else if (value && !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])/.test(value)) errorMsg = "Password must contain uppercase, lowercase, number, and special character";
+        break;
       case "id_number":
         if (value && value.length < 5) errorMsg = "ID number seems too short";
         break;
@@ -110,8 +115,10 @@ const KYCForm = () => {
           else if (age > 120) errorMsg = "Invalid date of birth";
         }
         break;
+      default:
+        break;
     }
-    
+
     return errorMsg;
   };
 
@@ -153,17 +160,19 @@ const KYCForm = () => {
       const token = getToken();
       if (!token) throw new Error("You are not logged in.");
 
-      const profileRes = await fetch(`${API_BASE_URL}/api/profile/`, {
+      const profileData = {};
+      if (formData.phone) profileData.phone_number = formData.phone;
+      if (formData.full_name) profileData.full_name = formData.full_name;
+      if (formData.email) profileData.email = formData.email;
+      if (formData.password) profileData.password = formData.password;
+
+      const profileRes = await fetch(`${API_BASE_URL}/api/auth/profile/`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          full_name: formData.full_name,
-          email: formData.email,
-          phone_number: formData.phone,
-        }),
+        body: JSON.stringify(profileData),
       });
 
       if (profileRes.status === 401) throw new Error("Session expired. Please log in again.");
@@ -316,15 +325,14 @@ const KYCForm = () => {
                   {/* Full Name */}
                   <div>
                     <label className="block text-sm font-semibold text-foreground mb-2">
-                      Full Legal Name <span className="text-destructive">*</span>
+                      Full Legal Name
                     </label>
                     <input
                       name="full_name"
                       value={formData.full_name}
                       onChange={handleChange}
-                      className={`w-full border-2 ${fieldErrors.full_name ? 'border-destructive focus:border-destructive' : 'border-input focus:border-green-500'} focus:ring-4 focus:ring-green-500/10 rounded-lg px-4 py-3 transition-all outline-none text-foreground bg-background placeholder:text-muted-foreground`}
-                      placeholder="John Doe Smith"
-                      required
+                      className={`w-full border-2 ${fieldErrors.full_name ? 'border-destructive focus:border-destructive' : 'border-input focus:border-primary'} focus:ring-4 focus:ring-primary/10 rounded-lg px-4 py-3 transition-all outline-none text-foreground bg-background placeholder:text-muted-foreground`}
+                      placeholder="Enter your full legal name"
                     />
                     {fieldErrors.full_name && (
                       <p className="mt-1.5 text-sm text-destructive flex items-center">
@@ -340,16 +348,15 @@ const KYCForm = () => {
                   <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
                     <div>
                       <label className="block text-sm font-semibold text-foreground mb-2">
-                        Email Address <span className="text-destructive">*</span>
+                        Email Address
                       </label>
                       <input
                         name="email"
                         value={formData.email}
-                        onChange={handleChange}
                         type="email"
+                        onChange={handleChange}
                         className={`w-full border-2 ${fieldErrors.email ? 'border-destructive focus:border-destructive' : 'border-input focus:border-primary'} focus:ring-4 focus:ring-primary/10 rounded-lg px-4 py-3 transition-all outline-none text-foreground bg-background placeholder:text-muted-foreground`}
                         placeholder="john@example.com"
-                        required
                       />
                       {fieldErrors.email && (
                         <p className="mt-1.5 text-sm text-destructive flex items-center">
@@ -370,7 +377,7 @@ const KYCForm = () => {
                         value={formData.phone}
                         onChange={handleChange}
                         className={`w-full border-2 ${fieldErrors.phone ? 'border-destructive focus:border-destructive' : 'border-input focus:border-primary'} focus:ring-4 focus:ring-primary/10 rounded-lg px-4 py-3 transition-all outline-none text-foreground bg-background placeholder:text-muted-foreground`}
-                        placeholder="+1 (555) 000-0000"
+                        placeholder="+254 700 000 000"
                       />
                       {fieldErrors.phone && (
                         <p className="mt-1.5 text-sm text-destructive flex items-center">
@@ -381,6 +388,29 @@ const KYCForm = () => {
                         </p>
                       )}
                     </div>
+                  </div>
+
+                  {/* Password */}
+                  <div>
+                    <label className="block text-sm font-semibold text-foreground mb-2">
+                      Update Password
+                    </label>
+                    <input
+                      name="password"
+                      value={formData.password}
+                      type="password"
+                      onChange={handleChange}
+                      className={`w-full border-2 ${fieldErrors.password ? 'border-destructive focus:border-destructive' : 'border-input focus:border-primary'} focus:ring-4 focus:ring-primary/10 rounded-lg px-4 py-3 transition-all outline-none text-foreground bg-background placeholder:text-muted-foreground`}
+                      placeholder="Enter new password (leave blank to keep current)"
+                    />
+                    {fieldErrors.password && (
+                      <p className="mt-1.5 text-sm text-destructive flex items-center">
+                        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        {fieldErrors.password}
+                      </p>
+                    )}
                   </div>
 
                   {/* ID Number & DOB */}
